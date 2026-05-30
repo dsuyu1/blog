@@ -9,6 +9,22 @@ type ListItemProps = ComponentPropsWithoutRef<'li'>;
 type AnchorProps = ComponentPropsWithoutRef<'a'>;
 type BlockquoteProps = ComponentPropsWithoutRef<'blockquote'>;
 
+function Callout({ children, color }: { children: React.ReactNode; color: string }) {
+  return (
+    <div className={`my-4 rounded-md border-l-4 ${color} px-4 py-3 text-sm`}>
+      {children}
+    </div>
+  );
+}
+
+export function Note({ children }: { children: React.ReactNode }) {
+  return <Callout color="border-blue-400 bg-blue-50 text-blue-900 dark:bg-blue-950/30 dark:text-blue-200">{children}</Callout>;
+}
+
+export function Important({ children }: { children: React.ReactNode }) {
+  return <Callout color="border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">{children}</Callout>;
+}
+
 const components = {
   h1: (props: HeadingProps) => (
     <h1 className="font-medium pt-12 mb-0" {...props} />
@@ -107,6 +123,16 @@ const components = {
       {...props}
     />
   ),
+  img: (props: ComponentPropsWithoutRef<'img'>) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      {...props}
+      alt={props.alt ?? ''}
+      className="rounded-md my-4 max-w-full"
+    />
+  ),
+  Note,
+  Important,
 };
 
 declare global {

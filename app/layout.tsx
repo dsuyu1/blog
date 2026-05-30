@@ -11,8 +11,8 @@ export const metadata: Metadata = {
     canonical: '/'
   },
   title: {
-    default: 'John Smith',
-    template: '%s | John Smith'
+    default: 'Damian Villarreal',
+    template: '%s | Damian Villarreal'
   },
   description: 'My portfolio, blog, and personal website.'
 };
@@ -23,13 +23,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.className}`}>
+    <html lang="en" className={`${inter.className} bg-white dark:bg-zinc-900`}>
       <body className="antialiased tracking-tight">
-        <div className="min-h-screen flex flex-col justify-between pt-0 md:pt-8 p-8 dark:bg-zinc-950 bg-white text-gray-900 dark:text-zinc-200">
-          <main className="max-w-[60ch] mx-auto w-full space-y-6">
-            {children}
-          </main>
-          <Footer />
+        <nav className="sticky top-0 z-10 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-gray-100 dark:border-zinc-800">
+          <div className="max-w-[60ch] mx-auto px-8 py-4">
+            <Nav />
+          </div>
+        </nav>
+        <div className="min-h-screen flex flex-col pt-8 p-8 dark:bg-zinc-900 bg-white text-gray-900 dark:text-zinc-200">
+          <div className="max-w-[60ch] mx-auto w-full">
+            <main className="space-y-6">
+              {children}
+            </main>
+          </div>
           <Analytics />
         </div>
       </body>
@@ -37,29 +43,15 @@ export default function RootLayout({
   );
 }
 
-function Footer() {
-  const links = [
-    { name: '@johnsmith', url: 'https://x.com/johnsmith' },
-    { name: 'youtube', url: 'https://www.youtube.com/@johnsmith' },
-    { name: 'linkedin', url: 'https://www.linkedin.com/in/johnsmith' },
-    { name: 'github', url: 'https://github.com/johnsmith' }
-  ];
-
+function Nav() {
   return (
-    <footer className="mt-12 text-center">
-      <div className="flex justify-center space-x-4 tracking-tight">
-        {links.map((link) => (
-          <a
-            key={link.name}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-gray-400 dark:text-gray-500 hover:text-blue-500 transition-colors duration-200"
-          >
-            {link.name}
-          </a>
-        ))}
-      </div>
-    </footer>
+    <nav className="flex items-center gap-6">
+      <a href="/" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+        blog
+      </a>
+      <a href="/about" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+        about
+      </a>
+    </nav>
   );
 }
