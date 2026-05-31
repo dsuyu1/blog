@@ -9,14 +9,15 @@ export const metadata = {
 
 <br />
 
-In this post, I'll be documenting the first part of my technical analysis of the Akira ransomware variant. I'll be using [this report](https://github.com/MottaSec/akira-ransomware-reverse) as my guide. The report is extremely thorough but not especially beginner-friendly. In this series, I aim to document how I arrived at similar conclusions and to expand on what we can take away from those findings. Rather than providing a complete or authoritative analysis, my goal is to show the learning process itself.
+In this post, I'll be documenting the first part of my technical analysis of the Akira ransomware variant. I'll be using [this report](https://github.com/MottaSec/akira-ransomware-reverse) as my guide. The report is extremely thorough but not especially beginner-friendly. 
+I aim to document how I arrived at similar conclusions and to expand on what we can take away from those findings. Rather than providing a complete or authoritative analysis, my goal is to show the learning process itself.
 
 I also recommend these supplementary materials:
 
 - [Arete Akira Technical Analysis](https://areteir.com/static/bbdda35a1cc631e53cd929e075af873f/Malware-Spotlight-Akira-Ransomware.pdf)
 - [CISA Akira Report](https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-109a)
 
-Reverse engineering plays an important role in digital forensics and vulnerability research. In this series, we examine malware through the lens of blue teams. How can we dismantle malware, identify its weaknesses, and use that knowledge to develop effective defenses?
+Reverse engineering plays an important role in digital forensics and vulnerability research. How can we dismantle malware, identify its weaknesses, and use that knowledge to develop effective defenses?
 
 ## What is Akira?
 
@@ -82,6 +83,7 @@ Notable imports:
 - `kernel32.dll` — the core Windows API. Provides `CreateDirectoryW`, `CreateEventW`, `CreateFileW`, `DeleteFileW`, `TerminateProcess`, `WriteFile`, etc.
 
 Interestingly, there are no cryptographic libraries, which means Akira uses its own custom code for key generation.
+A custom key generation module might be something we can pick apart and try to find weaknesses in.
 
 ## 1.3 Strings
 

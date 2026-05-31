@@ -77,10 +77,9 @@ const projects = [
 ];
 
 const skills = [
-  { label: 'Languages', value: 'Python, PowerShell, Bash, Rust' },
-  { label: 'Security', value: 'Splunk, SentinelOne, Defender, Wazuh, TheHive/Cortex, LimaCharlie, Tines, Ghidra' },
+  { label: 'Languages', value: 'Python, PowerShell, Bash' },
+  { label: 'Security', value: 'Splunk, SentinelOne, Microsoft Defender, Wazuh, TheHive/Cortex, LimaCharlie, Tines, Ghidra' },
   { label: 'Cloud & Infra', value: 'AWS, Azure, GCP, Docker, Kubernetes, Terraform, Cloudflare, Tailscale, Hyperledger' },
-  { label: 'Frameworks', value: 'MITRE ATT&CK, NIST CSF, Threat Hunting, IR, LLM Fine-Tuning, DAPT' },
 ];
 
 const certs = ['CompTIA Security+ ce', 'CompTIA Network+ ce', 'CompTIA CySA+ ce', 'CompTIA SecAI+ ce'];
