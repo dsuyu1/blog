@@ -3,9 +3,7 @@
 This is a blog template built with:
 
 - **Framework**: [Next.js](https://nextjs.org)
-- **Deployment**: [Vercel](https://vercel.com)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com)
-- **Analytics**: [Vercel Analytics](https://vercel.com/analytics)
 - **Database** (Optional): [Postgres](https://vercel.com/postgres)
 
 ## Running Locally
