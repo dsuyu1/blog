@@ -34,7 +34,7 @@ const experience = [
     title: 'RSOC Student Analyst Lead',
     org: 'UTRGV Regional Security Operations Center',
     period: 'Sep 2024 – Present',
-    summary: 'Detection & response, threat hunting, and leading 20+ analysts across 20,000+ endpoints.',
+    summary: 'Detection & response, threat hunting, and leading student analysts managing 20,000+ endpoints.',
   },
   {
     title: 'Founder & Executive Director',
@@ -52,7 +52,7 @@ const experience = [
     title: 'Student Academic Tutor',
     org: 'UTRGV',
     period: 'Sep 2023 – Dec 2023',
-    summary: 'In-person instruction for 30+ Calculus I students.',
+    summary: 'In-person instruction for 100+ Calculus I students.',
   },
 ];
 
