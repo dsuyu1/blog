@@ -1,0 +1,328 @@
+import { Math } from '../../components/math';
+import { ProblemCard } from '../../components/problem-card';
+
+
+export const metadata = {
+  title: 'Momoyo and the Network',
+  alternates: {
+    canonical: '/n/6',
+  },
+};
+
+![Gensokyo](/gensokyo.avif)
+
+<ProblemCard
+  title="Momoyo and the Network"
+  href="https://codeforces.com/problemset/problem/2228/F"
+>
+The Underground Great Line Network is a grand transit system connecting all corners of Gensokyo. Momoyo noticed that the network's layout resembled a tree structure. She couldn't help but imagine the most effective way to dismantle that tree.
+<br></br>
+Given a tree with **n** nodes where node _i_ has weight _aᵢ_, select a simple path of exactly **k edges** and remove all edges on it. This splits the tree into _k+1_ connected components. You need to **maximize the minimum component weight**, or output `-1` if no such path of exactly k edges exists.
+</ProblemCard>
+
+
+
+# Approach
+
+We binary search the answer.
+
+Let `x` be the minimum component weight we want to guarantee. If `x` is feasible, any smaller `x` is also feasible, so this is monotone.
+
+Upper bound: if all `k+1` components are at least `x`, then `(k+1) * x <= totalSum`, so `x <= totalSum / (k+1)`.
+
+## Path Existence (Diameter)
+
+A simple path of exactly `k` edges exists iff the tree diameter (longest simple path length) is at least `k`.
+Compute diameter by BFS twice:
+1. BFS from any node to find a farthest node `u`.
+2. BFS from `u` to find the farthest distance `diameter`.
+If `diameter < k`, answer is `-1`.
+
+## Why Checking "Length >= k" Is Enough
+
+In the feasibility check for a fixed `x`, it is enough to find a valid path of length at least `k`.
+
+If there is a valid path with `L > k` edges, take any consecutive subpath of exactly `k` edges. Removing fewer edges only merges adjacent components, which increases their weights, so the minimum component weight cannot decrease. Therefore, `exists length >= k` implies `exists length == k`.
+
+## Feasibility for a Fixed `x`
+
+Root the tree (we root at a diameter endpoint). Let:
+- `sub[v]` = subtree sum of `v` under this root
+- `total = sub[root]`
+
+For an edge between parent `p` and child `c`, cutting it gives:
+- child side weight = `sub[c]`
+- parent side weight = `total - sub[c]`
+
+Any edge used by the cut-path must satisfy both endpoint components are at least `x`:
+`x <= sub[c] <= total - x`.
+
+When a cut-path passes through a node `p`, the component containing `p` is:
+`total - W1 - W2`,
+where `W1` and `W2` are the weights on the two sides removed at `p` (child subtrees or the parent side).
+We need `W1 + W2 <= total - x`.
+
+### Directed-Edge DP (Arms)
+
+We compute the maximum length of a valid cut-path using two DPs over directed edges:
+- `dp_down[v]`: longest valid arm that starts with edge `(parent[v], v)` and continues downward inside `v`'s subtree.
+- `dp_up[v]`: longest valid arm that starts with edge `(v, parent[v])` and continues upward/outside `v`'s subtree.
+
+Postorder:
+- If `sub[v]` is not in `[x, total-x]`, then `dp_down[v] = 0`.
+- Otherwise `dp_down[v] = 1 + max(dp_down[c])` over children `c` that can follow while keeping the internal component at `v` at least `x`.
+
+Preorder reroot:
+- For each parent `p` and child `c`, compute the best "other direction" arm you can attach to edge `(p, c)`:
+  - from another child `d != c` using `dp_down[d]`, or
+  - from the parent side using `dp_up[p]`,
+  - but only if the two removed-side weights sum to `<= total - x`.
+
+We sort children by `sub[child]` so we can use a two-pointer sweep per node and keep the whole reroot step linear overall.
+
+If any arm length reaches `>= k`, then `x` is feasible.
+
+## Complexity
+
+Per test case:
+- diameter: `O(n)`
+- build rooted tree + subtree sums: `O(n)`
+- sort children by subtree sums: `sum(deg(v) * log deg(v)) = O(n log n)` worst-case, typically much smaller
+- one feasibility check: `O(n)`
+- binary search: `O(log totalSum)`
+
+Overall: `O(n log totalSum)` per test case with `sum(n) <= 2e5`.
+
+# Why C++ (and not Python/PyPy here)
+
+This problem is tight `O(n log totalSum)` integer DP with heavy looping and random access over big arrays. Even with the right algorithm, Python/PyPy often time out due to interpreter overhead inside those loops.
+
+C++ tends to be the default in contests for this kind of task because:
+- the loops compile to optimized machine code
+- `vector<int>` / `vector<long long>` are contiguous and cache-friendly
+- fast buffered I/O is straightforward
+
+Rust can also be fast enough, but C++ usually has the smoothest contest workflow and the biggest library/pattern ecosystem.
+
+# Reference Implementation (C++)
+
+```cpp
+// Accepted solution for CF 2228F
+#include <bits/stdc++.h>
+using namespace std;
+
+struct FastScanner {
+    static constexpr size_t BUFSIZE = 1 << 20;
+    size_t idx = 0, size = 0;
+    array<char, BUFSIZE> buf{};
+    inline char readChar() {
+        if (idx >= size) {
+            size = fread(buf.data(), 1, BUFSIZE, stdin);
+            idx = 0;
+            if (size == 0) return 0;
+        }
+        return buf[idx++];
+    }
+    template <class T>
+    bool readInt(T &out) {
+        char c;
+        do { c = readChar(); if (!c) return false; } while (c <= ' ');
+        bool neg = false;
+        if (c == '-') { neg = true; c = readChar(); }
+        long long val = 0;
+        while (c > ' ') { val = val * 10 + (c - '0'); c = readChar(); }
+        out = neg ? -val : val;
+        return true;
+    }
+};
+
+static pair<int, int> bfs_farthest(int start, const vector<vector<int>> &adj) {
+    const int n = (int)adj.size() - 1;
+    vector<int> dist(n + 1, -1);
+    dist[start] = 0;
+    vector<int> q;
+    q.reserve(n);
+    q.push_back(start);
+    int far = start;
+    for (int qi = 0; qi < (int)q.size(); ++qi) {
+        int v = q[qi];
+        int dv = dist[v];
+        for (int u : adj[v]) {
+            if (dist[u] == -1) {
+                dist[u] = dv + 1;
+                q.push_back(u);
+                if (dist[u] > dist[far]) far = u;
+            }
+        }
+    }
+    return {far, dist[far]};
+}
+
+struct Solver {
+    int n = 0, k = 0;
+    vector<long long> w;                 // 1-indexed
+    vector<vector<int>> adj;
+    vector<int> parent, order;
+    vector<vector<int>> children;
+    vector<long long> sub;
+    vector<int> dp_down, dp_up;
+    int root = 1;
+    long long total = 0;
+
+    void build_rooted() {
+        parent.assign(n + 1, -1);
+        children.assign(n + 1, {});
+        order.clear();
+        order.reserve(n);
+
+        parent[root] = 0;
+        vector<int> st;
+        st.reserve(n);
+        st.push_back(root);
+        while (!st.empty()) {
+            int v = st.back();
+            st.pop_back();
+            order.push_back(v);
+            for (int u : adj[v]) {
+                if (u == parent[v]) continue;
+                parent[u] = v;
+                children[v].push_back(u);
+                st.push_back(u);
+            }
+        }
+
+        sub = w;
+        sub[0] = 0;
+        for (int i = (int)order.size() - 1; i > 0; --i) {
+            int v = order[i];
+            sub[parent[v]] += sub[v];
+        }
+        total = sub[root];
+
+        for (int v = 1; v <= n; ++v) {
+            auto &ch = children[v];
+            if (ch.size() > 1) {
+                sort(ch.begin(), ch.end(), [&](int a, int b) { return sub[a] < sub[b]; });
+            }
+        }
+    }
+
+    bool feasible(long long x) {
+        if (x <= 0) return true;
+        const long long T = total - x;
+
+        // dp_down[v]
+        for (int i = (int)order.size() - 1; i > 0; --i) {
+            int v = order[i];
+            long long sv = sub[v];
+            if (sv < x || sv > T) { dp_down[v] = 0; continue; }
+            long long limit = sv - x;
+            int best = 0;
+            for (int c : children[v]) {
+                if (sub[c] > limit) break;
+                best = max(best, dp_down[c]);
+            }
+            dp_down[v] = best + 1;
+            if (dp_down[v] >= k) return true;
+        }
+
+        dp_up[root] = 0;
+        for (int p : order) {
+            const auto &cl = children[p];
+            int m = (int)cl.size();
+            if (!m) continue;
+
+            int par = parent[p];
+            int dp_par = (par > 0 ? dp_up[p] : 0);
+            bool have_par = (dp_par > 0);
+            long long w_par = have_par ? total - sub[p] : 0;
+
+            if (m == 1) {
+                int c = cl[0];
+                if (!dp_down[c]) { dp_up[c] = 0; continue; }
+                long long lim = T - sub[c];
+                int best = (have_par && w_par <= lim) ? dp_par : 0;
+                dp_up[c] = best + 1;
+                if (dp_up[c] >= k) return true;
+                continue;
+            }
+
+            int j = 0, top1 = 0, top2 = 0, top1_id = -1, top2_id = -1;
+            bool par_added = false;
+
+            for (int idx = m - 1; idx >= 0; --idx) {
+                int c = cl[idx];
+                if (!dp_down[c]) { dp_up[c] = 0; continue; }
+
+                long long lim = T - sub[c];
+                while (j < m && sub[cl[j]] <= lim) {
+                    int d = cl[j++];
+                    int dv = dp_down[d];
+                    if (!dv) continue;
+                    if (dv > top1) { top2 = top1; top2_id = top1_id; top1 = dv; top1_id = d; }
+                    else if (dv > top2) { top2 = dv; top2_id = d; }
+                }
+                if (have_par && !par_added && w_par <= lim) {
+                    par_added = true;
+                    int dv = dp_par;
+                    if (dv > top1) { top2 = top1; top2_id = top1_id; top1 = dv; top1_id = par; }
+                    else if (dv > top2) { top2 = dv; top2_id = par; }
+                }
+
+                int best = (top1_id != c ? top1 : top2);
+                dp_up[c] = best + 1;
+                if (dp_up[c] >= k) return true;
+            }
+        }
+        return false;
+    }
+
+    long long solve_one() {
+        auto [u, _] = bfs_farthest(1, adj);
+        auto [v, diam] = bfs_farthest(u, adj);
+        if (diam < k) return -1;
+        root = u;
+
+        build_rooted();
+        dp_down.assign(n + 1, 0);
+        dp_up.assign(n + 1, 0);
+
+        long long lo = 1, hi = total / (k + 1), ans = 0;
+        while (lo <= hi) {
+            long long mid = (lo + hi) >> 1;
+            if (feasible(mid)) { ans = mid; lo = mid + 1; }
+            else hi = mid - 1;
+        }
+        return ans;
+    }
+};
+
+int main() {
+    FastScanner fs;
+    int t;
+    if (!fs.readInt(t)) return 0;
+    string out;
+    out.reserve((size_t)t * 4);
+
+    while (t--) {
+        Solver s;
+        fs.readInt(s.n);
+        fs.readInt(s.k);
+        s.w.assign(s.n + 1, 0);
+        for (int i = 1; i <= s.n; ++i) fs.readInt(s.w[i]);
+        s.adj.assign(s.n + 1, {});
+        for (int i = 0; i < s.n - 1; ++i) {
+            int u, v;
+            fs.readInt(u);
+            fs.readInt(v);
+            s.adj[u].push_back(v);
+            s.adj[v].push_back(u);
+        }
+        out += to_string(s.solve_one());
+        out += '\\n';
+    }
+
+    fwrite(out.data(), 1, out.size(), stdout);
+    return 0;
+}
+```

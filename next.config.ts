@@ -24,13 +24,10 @@ const nextConfig: NextConfig = {
       permanent: !!permanent
     }));
   },
-  // Note: Using the Rust compiler means we cannot use
-  // rehype or remark plugins. If you need them, remove
-  // the `experimental.mdxRs` flag.
   experimental: {
     mdxRs: { mdxType: 'gfm' }
   }
- };
+};
 
 const withMDX = createMDX({});
 

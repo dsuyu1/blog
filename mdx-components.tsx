@@ -1,6 +1,7 @@
 import React, { ComponentPropsWithoutRef } from 'react';
 import Link from 'next/link';
 import { highlight } from 'sugar-high';
+import hljs from 'highlight.js';
 
 type HeadingProps = ComponentPropsWithoutRef<'h1'>;
 type ParagraphProps = ComponentPropsWithoutRef<'p'>;
@@ -93,7 +94,19 @@ const components = {
       </a>
     );
   },
-  code: ({ children, ...props }: ComponentPropsWithoutRef<'code'>) => {
+  code: ({ children, className, ...props }: ComponentPropsWithoutRef<'code'>) => {
+    const language = className?.replace('language-', '');
+    if (language && hljs.getLanguage(language)) {
+      const highlighted = hljs.highlight(children as string, { language }).value;
+      return (
+        <code
+          className={`hljs ${className}`}
+          dangerouslySetInnerHTML={{ __html: highlighted }}
+          {...props}
+        />
+      );
+    }
+    // inline code — use sugar-high
     const codeHTML = highlight(children as string);
     return <code dangerouslySetInnerHTML={{ __html: codeHTML }} {...props} />;
   },

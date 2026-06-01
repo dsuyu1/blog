@@ -1,4 +1,5 @@
 import './globals.css';
+import 'highlight.js/styles/github-dark.min.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
@@ -26,12 +27,12 @@ export default function RootLayout({
     <html lang="en" className={`${inter.className} bg-white dark:bg-zinc-950`}>
       <body className="antialiased tracking-tight">
         <nav className="sticky top-0 z-10 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm border-b border-gray-100 dark:border-zinc-800">
-          <div className="max-w-[60ch] mx-auto px-8 py-4">
+          <div className="max-w-[90ch] mx-auto px-8 py-4">
             <Nav />
           </div>
         </nav>
         <div className="min-h-screen flex flex-col pt-8 p-8 dark:bg-zinc-950 bg-white text-gray-900 dark:text-zinc-200">
-          <div className="max-w-[60ch] mx-auto w-full">
+          <div className="max-w-[90ch] mx-auto w-full">
             <main className="space-y-6">
               {children}
             </main>
