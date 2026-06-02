@@ -5,7 +5,7 @@ type Post = {
   href: string;
   preview: string;
   date: string;
-  tag?: 'codeforces';
+  tag?: 'codeforces' | 'aws';
 };
 
 const posts: Post[] = [
@@ -28,9 +28,16 @@ const posts: Post[] = [
     date: 'May 31, 2026',
     tag: 'codeforces',
   },
+  {
+    title: 'AWS DevOps Agent Workshop for Incident Investigation',
+    href: '/n/7',
+    preview: 'Learning how to use the AWS DevOps Agent for incident investigation.',
+    date: 'June 1, 2026',
+    tag: 'aws',
+  },
 ];
 
-const sorted = (tag?: 'codeforces') =>
+const sorted = (tag?: 'codeforces' | 'aws') =>
   posts
     .filter((p) => (tag ? p.tag === tag : !p.tag))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -38,6 +45,7 @@ const sorted = (tag?: 'codeforces') =>
 export default function Home() {
   const main = sorted();
   const cf = sorted('codeforces');
+  const aws = sorted('aws');
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-12">
@@ -58,23 +66,46 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Codeforces sidebar */}
-      <div className="space-y-4">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-          Codeforces
-        </h2>
+      {/* Sidebar */}
+      <div className="space-y-8">
+        {/* Codeforces */}
         <div className="space-y-4">
-          {cf.map((post) => (
-            <Link key={post.href} href={post.href} className="block group space-y-0.5">
-              <p className="text-sm font-medium group-hover:text-blue-500 transition-colors leading-snug">
-                {post.title}
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">{post.date}</p>
-            </Link>
-          ))}
-          {cf.length === 0 && (
-            <p className="text-xs text-gray-400 dark:text-gray-600">Nothing yet.</p>
-          )}
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+            Codeforces
+          </h2>
+          <div className="space-y-4">
+            {cf.map((post) => (
+              <Link key={post.href} href={post.href} className="block group space-y-0.5">
+                <p className="text-sm font-medium group-hover:text-blue-500 transition-colors leading-snug">
+                  {post.title}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{post.date}</p>
+              </Link>
+            ))}
+            {cf.length === 0 && (
+              <p className="text-xs text-gray-400 dark:text-gray-600">Nothing yet.</p>
+            )}
+          </div>
+        </div>
+
+        {/* AWS */}
+        <div className="space-y-4">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+            AWS
+          </h2>
+          <div className="space-y-4">
+            {aws.map((post) => (
+              <Link key={post.href} href={post.href} className="block group space-y-0.5">
+                <p className="text-sm font-medium group-hover:text-blue-500 transition-colors leading-snug">
+                  {post.title}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{post.date}</p>
+              </Link>
+            ))}
+            {aws.length === 0 && (
+              <p className="text-xs text-gray-400 dark:text-gray-600">Nothing yet.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
