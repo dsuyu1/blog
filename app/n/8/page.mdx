@@ -1,0 +1,459 @@
+export const metadata = {
+  title: 'Automating SOC Dashboard Displays',
+  alternates: {
+    canonical: '/n/8',
+  },
+};
+
+# Automating SOC Dashboard Displays
+
+<br />
+
+In a security operations center, visibility is everything. Dashboards showing ticket queues,
+threat detections, and key metrics should be front-and-center the moment your team walks in —
+not something anyone has to manually set up every morning. This post walks through automating
+the entire stack on Windows-based display machines: scheduled power, auto-login, browser
+launch, and SSO authentication via Playwright.
+
+We'll also touch on where this is all heading: a locally-hosted AI assistant that lets you
+query your security tooling with plain language.
+
+---
+
+# Part 1: Scheduled Power — Wake and Shutdown
+
+The first challenge is getting the machine on and off at the right times without anyone
+touching it.
+
+## Waking the Machine: BIOS Scheduled Power-On
+
+PowerShell can't turn on a machine that's fully powered off — something has to initiate that.
+Most modern machines support one or both of the following:
+
+- **BIOS/UEFI RTC Wake (Recommended)** — Most firmware includes a *Scheduled Power On* or
+  *RTC Wake* option under Power Management. You set a daily wake time and the hardware handles
+  the rest, no software required.
+- **Wake-on-LAN (WoL)** — If machines can be left in sleep/hibernate instead of fully off,
+  a server on the same LAN sends a magic packet to wake them. Requires WoL enabled in BIOS
+  and on the network adapter.
+
+<Note>
+Check Power Management in your UEFI settings for "Auto Power On", "Scheduled Boot", or "RTC
+Alarm". The exact label varies by manufacturer — Dell, HP, and Lenovo all differ slightly.
+</Note>
+
+### Enabling WoL via PowerShell
+
+If you're going the WoL route, enable it on the network adapter of each display machine:
+
+```powershell
+Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | ForEach-Object {
+    $adapterName = $_.Name
+    $adapter = Get-WmiObject MSPower_DeviceWakeEnable -Namespace root\wmi |
+               Where-Object { $_.InstanceName -match $adapterName }
+    if ($adapter) { $adapter.Enable = $true; $adapter.Put() }
+}
+```
+
+To send the magic packet from a management server:
+
+```powershell
+# Send-WOL -MacAddress '00:1A:2B:3C:4D:5E'
+# Or use a standalone tool like wolcmd.exe
+```
+
+## Scheduled Shutdown: Task Scheduler
+
+Shutdown is straightforward. Create the task once and it runs itself every weekday.
+
+**Option A — GUI:** Open Task Scheduler → Create Basic Task → Daily, Mon–Fri at 17:00,
+action `shutdown.exe` with argument `/s /t 60`.
+
+**Option B — PowerShell (better for multiple machines):**
+
+```powershell
+$action  = New-ScheduledTaskAction -Execute "shutdown.exe" -Argument "/s /t 60"
+$trigger = New-ScheduledTaskTrigger -Weekly `
+           -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday `
+           -At "17:00"
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
+
+Register-ScheduledTask `
+    -TaskName    "SOC-Display-Shutdown" `
+    -Action      $action `
+    -Trigger     $trigger `
+    -Settings    $settings `
+    -RunLevel    Highest `
+    -Force
+```
+
+## Manual Override
+
+Schedules are a default, not a requirement:
+
+- **Immediate shutdown:** `shutdown /s /t 0`
+- **Cancel a pending shutdown** (within the grace window): `shutdown /a`
+- **Keep displays on past hours:** `Disable-ScheduledTask -TaskName 'SOC-Display-Shutdown'`
+- **Re-enable:** `Enable-ScheduledTask -TaskName 'SOC-Display-Shutdown'`
+
+<Note>
+Create two additional on-demand tasks — `SOC-Display-Shutdown-Disable` and
+`SOC-Display-Shutdown-Enable` — so anyone can toggle the schedule without opening
+Task Scheduler. These can later be wired to a voice command (see Part 5).
+</Note>
+
+---
+
+# Part 2: Windows Auto-Login
+
+Once the machine powers on, it needs to reach the desktop without anyone pressing Enter.
+
+## Sysinternals Autologon
+
+The naive approach — storing a plaintext password in the registry under
+`HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon` — works but leaves credentials
+readable by any local admin or registry scraper. The better tool is **Autologon.exe** from
+Microsoft Sysinternals. It stores the password encrypted via LSA secrets, the same mechanism
+Windows uses for service account credentials.
+
+```powershell
+# GUI: run autologon.exe and fill in the form
+# Silent/scripted:
+autologon.exe <username> <domain> <password> /accepteula
+```
+
+<Note>
+For domain-joined machines, use the domain name in the Domain field. For local accounts, use
+the machine name or `.` as the domain.
+</Note>
+
+## Domain-Joined Machines and Azure AD
+
+If your display machines are joined to Active Directory or Azure AD (Entra ID), the login
+story gets cleaner. Domain-joined machines with autologin authenticate using stored domain
+credentials, and Edge can transparently pass those credentials to your identity provider via
+Windows Integrated Authentication. SSO-protected dashboards may open without any additional
+step at all — the browser session is already authenticated.
+
+- **Entra ID / Azure AD joined** — Edge uses the Primary Refresh Token (PRT) for silent
+  authentication. No credentials stored in the browser.
+- **On-prem AD with federated SSO** — Kerberos tokens pass through in Edge/Chrome with
+  proper GPO settings.
+- **Workgroup machines** — need browser-level session management covered in Part 3.
+
+## Security Considerations
+
+<Important>
+Use a dedicated service account for display machines — not a personal or admin account.
+Scope its permissions to read-only access on the dashboards it needs to display.
+</Important>
+
+- Enable screen lock on idle if the displays are accessible to non-staff.
+- Autologon.exe's LSA encryption is not unbreakable — a local admin can extract it with the
+  right tools. Minimize what this account can do.
+- Log autologin activity. If someone accesses one of these machines interactively, you want
+  to know.
+
+---
+
+# Part 3: Browser Launch and SSO Authentication
+
+With the machine on and the desktop loaded, the next step is getting the right dashboards
+open in the browser — already authenticated — without any user interaction.
+
+## Launching the Browser on Login
+
+A Task Scheduler task triggered on user logon opens each dashboard URL after autologin
+completes:
+
+```powershell
+$action = New-ScheduledTaskAction `
+    -Execute  "msedge.exe" `
+    -Argument "--start-fullscreen https://your-dashboard-url.com"
+
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+
+Register-ScheduledTask `
+    -TaskName "SOC-Display-Launch" `
+    -Action   $action `
+    -Trigger  $trigger `
+    -RunLevel Highest `
+    -Force
+```
+
+For multiple dashboards across multiple monitors, use `--window-position` to place each
+window on the correct display:
+
+```powershell
+# Monitor 1 (1920x1080 at position 0,0)
+$arg1 = "--start-fullscreen --window-position=0,0 https://dashboard-one.com"
+# Monitor 2 (1920x1080 at position 1920,0)
+$arg2 = "--start-fullscreen --window-position=1920,0 https://dashboard-two.com"
+```
+
+## Edge vs. Chrome
+
+For enterprise environments, Microsoft Edge is the better default:
+
+- **Silent SSO with Entra ID** — Edge uses the Windows PRT on Entra ID-joined machines to
+  silently authenticate. Dashboards often open already logged in.
+- **Kiosk Mode** — the `--kiosk` flag is designed for exactly this use case: locked-down,
+  full-screen, no browser chrome.
+- **MDM/GPO manageable** — configurable via Group Policy or Intune.
+
+## Session Persistence
+
+To avoid re-authentication on every reboot:
+
+- Set Edge to *Continue where you left off* under Settings → On Startup.
+- Use a dedicated browser profile for the display account.
+- Disable *Clear cookies on exit* — display machines are not general-purpose browsing
+  machines, treat them accordingly.
+
+## Testing SSO Behavior
+
+Before relying on silent auth, test the actual flow on a clean session:
+
+1. Log in to the display account, open the browser, navigate to each dashboard URL.
+2. Note which authenticate silently, which prompt for credentials, and which require clicking
+   a button (e.g., "Sign in with SSO").
+3. Dashboards that authenticate silently: you're done — Task Scheduler + browser launch is sufficient.
+4. Dashboards that require a button click: handled in Part 4 with Playwright.
+
+<Note>
+In practice, once one SSO session is established in the browser, subsequent dashboards on the
+same identity provider usually authenticate transparently. Typically only the first dashboard
+requires any interaction — which is exactly what Playwright is there to handle.
+</Note>
+
+---
+
+# Part 4: Playwright for Stubborn SSO Prompts
+
+When silent authentication isn't available — typically because the identity provider requires
+an explicit button click — Playwright handles it deterministically. No AI, no guessing: you
+record the exact selectors and the script clicks them the same way every time.
+
+## Why Playwright Over Other Options
+
+You could use AutoHotKey, SendKeys, or image-based clicking tools. Playwright is better for
+this job:
+
+- Waits for elements to be visible and ready before acting — no hardcoded sleep timers that
+  break when the network is slow.
+- Selectors are tied to the DOM, not screen coordinates. Layout changes don't break the script.
+- Runs against an existing browser profile, so it works within the already-authenticated session.
+- Python API is clean and readable — easy to maintain as pages change.
+
+## Setup
+
+```bash
+pip install playwright
+playwright install chromium
+```
+
+<Note>
+You only need Chromium unless your dashboards require a specific browser. Playwright's
+Chromium build is self-contained and separate from any installed Chrome or Edge.
+</Note>
+
+## Reusing an Existing Browser Profile
+
+The key is pointing Playwright at the same browser profile the display machine already uses.
+Any SSO session established during autologin is available to the script — no need to
+re-authenticate from scratch.
+
+```python
+from playwright.sync_api import sync_playwright
+import os
+
+PROFILE_PATH = os.path.expandvars(
+    r'%LOCALAPPDATA%\Microsoft\Edge\User Data'
+)
+
+with sync_playwright() as p:
+    browser = p.chromium.launch_persistent_context(
+        user_data_dir=PROFILE_PATH,
+        channel='msedge',   # or 'chrome'
+        headless=False,     # must render on the display
+        args=['--start-fullscreen']
+    )
+    page = browser.new_page()
+    page.goto('https://your-dashboard-url.com')
+```
+
+## Handling the SSO Button Click
+
+Inspect the button in browser DevTools to get its selector, then wait for it and click:
+
+```python
+# By text content
+page.wait_for_selector('text=Sign in with SSO', timeout=10000)
+page.click('text=Sign in with SSO')
+page.wait_for_load_state('networkidle')
+
+# By CSS selector
+page.wait_for_selector('#sso-login-btn')
+page.click('#sso-login-btn')
+
+# By ARIA role
+page.get_by_role('button', name='Sign in with SSO').click()
+```
+
+## Full Example: Multi-Dashboard Launch Script
+
+This script opens three dashboards in sequence. It handles the SSO prompt on the first one —
+establishing the session — then loads the rest.
+
+```python
+from playwright.sync_api import sync_playwright
+import os, time
+
+PROFILE = os.path.expandvars(
+    r'%LOCALAPPDATA%\Microsoft\Edge\User Data'
+)
+
+DASHBOARDS = [
+    'https://tickets.example.com',   # Jira / ticketing
+    'https://security.example.com',  # EDR platform
+    'https://network.example.com',   # NDR platform
+]
+
+def handle_sso_if_present(page):
+    try:
+        btn = page.wait_for_selector(
+            'text=Sign in with SSO', timeout=5000)
+        if btn:
+            btn.click()
+            page.wait_for_load_state('networkidle')
+    except:
+        pass  # Already authenticated, no prompt present
+
+with sync_playwright() as p:
+    ctx = p.chromium.launch_persistent_context(
+        user_data_dir=PROFILE,
+        channel='msedge',
+        headless=False,
+        args=['--start-fullscreen']
+    )
+    time.sleep(3)  # Brief pause for browser init
+    for url in DASHBOARDS:
+        page = ctx.new_page()
+        page.goto(url)
+        handle_sso_if_present(page)
+    # Leave browser open -- do not call ctx.close()
+```
+
+<Note>
+`handle_sso_if_present` is intentionally fault-tolerant. If the SSO button isn't found
+because the session is already active, it silently moves on. The same script works on a fresh
+boot and a reboot where the session persisted.
+</Note>
+
+## Wiring It Into Task Scheduler
+
+```powershell
+$action = New-ScheduledTaskAction `
+    -Execute  "python.exe" `
+    -Argument "C:\SOC\launch_dashboards.py"
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+Register-ScheduledTask -TaskName "SOC-Display-Playwright" `
+    -Action $action -Trigger $trigger -RunLevel Highest -Force
+```
+
+---
+
+# Part 5: AI Voice Control — The SOC Assistant
+
+The scheduled automation handles the routine. But there's a more interesting layer on top:
+a locally-hosted AI assistant that lets you interact with your security tooling using plain
+language. Think less chatbot, more ops co-pilot.
+
+## The Concept
+
+The assistant sits on the local network, always listening for a wake word. When addressed, it
+accepts a natural language command, determines which tool to invoke, executes it, and speaks
+the result back. No data leaves the network.
+
+Example interactions:
+
+- *"Hey [Agent], start the monitors"* — triggers the display wake sequence.
+- *"Hey [Agent], turn off the monitors"* — runs the manual shutdown override.
+- *"Hey [Agent], how many assets have we onboarded?"* — Playwright navigates to the EDR
+  console (already authenticated) and reads the asset count from the dashboard.
+- *"Hey [Agent], what did Andrew say about blocking traffic on weekends?"* — Jira search
+  queries tickets by keyword and commenter, surfaces the relevant parent ticket, and
+  summarizes the thread.
+
+## Architecture
+
+The stack is entirely local:
+
+- **Speech-to-Text** — [Whisper](https://github.com/openai/whisper) via `faster-whisper`.
+  Fast, accurate, no API needed.
+- **Local LLM** — A quantized 7B–14B model via [Ollama](https://ollama.com). Models like
+  Llama 3.1 or Phi-4 support structured tool/function calling natively — no fine-tuning required.
+- **Text-to-Speech** — [Piper](https://github.com/rhasspy/piper) or Kokoro. Both run on CPU
+  with low latency.
+- **Skills / Tools** — Python functions that define each capability. The model reasons about
+  which one to call.
+
+## Skills, Not Training
+
+The key design insight is that you don't need to train anything. Modern instruction-tuned
+models already understand how to use tools when given clear definitions. You define each skill
+as a function with a description, expected inputs, and what it returns — the model handles the
+rest. New capabilities are just new Python functions.
+
+Planned skills for the SOC assistant:
+
+- **Playwright / Browser Control** — Navigates to an authenticated dashboard and reads or
+  interacts with it. Used for asset counts, alert summaries, and metric reads.
+- **Jira Search** — Queries the Jira REST API for tickets, comments, and assignees. Handles
+  natural language queries like *"what did [person] say about [topic]"* by searching text and
+  summarizing results.
+- **Web Fetch** — Fetches and parses web content for ad-hoc lookups: CVE details, vendor
+  advisories, internal wiki pages.
+- **Display Control** — Enables and disables the scheduled power tasks, or triggers immediate
+  shutdown/wake sequences.
+
+<Important>
+Running the model locally isn't just a cost choice — in a security operations context, it's
+the correct choice. Queries about active threats, asset inventories, and ticket contents
+shouldn't transit external APIs. A local model means your operational data stays on your
+network, and the assistant works during internet outages.
+</Important>
+
+## Why This Matters Beyond Convenience
+
+This assistant is a natural evolution of the infrastructure built in Parts 1–4. The
+authenticated browser sessions, the Playwright automation, and the scheduled task
+infrastructure all become tools the agent can call. The groundwork is laid incrementally, and
+by the time you get here, you're not adding complexity — you're adding a reasoning layer on
+top of things that already work.
+
+A 7B quantized model (e.g., Llama 3.1 8B Q4_K_M via Ollama) runs comfortably on a modest
+Windows machine. With a small GPU (8GB VRAM), response time comes in well under two seconds —
+fast enough to feel conversational.
+
+---
+
+# Putting It All Together
+
+The full automation stack, in order:
+
+1. **BIOS RTC wake** brings the machine up at a scheduled time, no software dependency.
+2. **Sysinternals Autologon** gets to the desktop without user interaction.
+3. **Task Scheduler + Edge** launches dashboards on logon, with Azure AD/Entra ID handling
+   SSO silently in most cases.
+4. **Playwright** handles any remaining SSO prompts deterministically, with a fault-tolerant
+   script that works whether or not a session was already cached.
+5. **Local AI assistant** sits on top of all of it, taking plain-language commands and
+   invoking the right tool — whether that's flipping a display on, querying a dashboard, or
+   surfacing a Jira thread.
+
+Each layer is independently useful. You can stop after Part 1 and already have machines that
+wake themselves up. The later parts build on what came before, and nothing requires any single
+point of failure you can't work around.
+
+More to come as this gets built out in practice.

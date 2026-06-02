@@ -1,0 +1,575 @@
+export const metadata = {
+  title: 'Building a Local AI Assistant for the SOC',
+  alternates: {
+    canonical: '/n/9',
+  },
+};
+
+# Building a Local AI Assistant for the SOC
+
+<br />
+
+This is Part 6 of the SOC display automation series. If you haven't read
+[Part 5](/n/8#part-5-ai-voice-control--the-soc-assistant), the short version is: we want a
+locally-hosted voice assistant that can control displays and query security tooling using
+plain language. This post goes from concept to working code.
+
+---
+
+# 1. The Problem
+
+Security analysts spend a surprising amount of time on low-effort, high-frequency tasks:
+checking how many assets are enrolled, pulling up what someone said in a ticket last week,
+confirming whether a specific alert fired today. None of these are hard. All of them require
+context-switching between tools, finding the right page, and reading the answer off a screen.
+
+Multiply that by a full shift and it adds up. More importantly, it breaks flow. When you're
+in the middle of investigating something, tabbing out to check an enrollment count and tabbing
+back is friction — small, but real.
+
+The displays we automated in Parts 1–4 help with passive visibility. But passive visibility
+only covers what's already on the screen. The moment someone asks a question that isn't
+answered by the current dashboard view, the manual process starts again.
+
+What we actually want is something closer to a knowledgeable colleague sitting in the room:
+you ask a question out loud, they look it up, they tell you the answer. You never left your
+train of thought.
+
+That's the problem. A local AI assistant — one that understands the tools in your environment
+and can act on them — is the solution.
+
+---
+
+# 2. The Plan
+
+Before writing any code, it helps to be precise about what we're building and how the pieces
+fit together.
+
+## What the assistant needs to do
+
+At minimum:
+
+1. Listen continuously for a wake word
+2. On wake, transcribe the spoken command
+3. Decide which tool (if any) to invoke based on the command
+4. Execute the tool and collect the result
+5. Speak the result back
+
+That's the core loop. Everything else — display control, Jira queries, browser reads — is
+just a tool plugged into step 3.
+
+## Components
+
+```
+Microphone input
+      │
+      ▼
+Wake word detection  ──  pvporcupine or a keyword-match on transcription
+      │
+      ▼
+Speech-to-text  ──  faster-whisper (local, no API)
+      │
+      ▼
+LLM with tool calling  ──  Ollama (Llama 3.1 or Phi-4)
+      │
+      ├──► Tool: Display Control  ──  PowerShell via subprocess
+      ├──► Tool: Jira Search      ──  Jira REST API
+      ├──► Tool: Browser Read     ──  Playwright
+      └──► Tool: Web Fetch        ──  httpx + BeautifulSoup
+      │
+      ▼
+Text-to-speech  ──  Piper (local, no API)
+      │
+      ▼
+Speaker output
+```
+
+## Tool calling, not prompt engineering
+
+The LLM's job is not to answer questions directly — it's to decide which tool to call and
+with what arguments. Ollama's function calling API lets you register tools as JSON schemas,
+and the model returns a structured call when it decides a tool is appropriate. Your Python
+code executes the actual work and hands the result back to the model to formulate a spoken
+response.
+
+This separation matters. The model doesn't need to know how Jira's API works. It just needs
+to know that a `search_jira` tool exists and what arguments it takes. The implementation
+lives in Python, where it's easy to test, debug, and update without touching the model.
+
+## Model choice
+
+We need a model that:
+
+- Runs well on a Windows machine with a consumer GPU (8GB VRAM target)
+- Supports tool/function calling natively
+- Responds fast enough to feel conversational (under 3 seconds for short queries)
+
+**Llama 3.1 8B** (Q4_K_M quantization via Ollama) fits all three. **Phi-4 Mini** is worth
+testing too — it's smaller and faster, and Microsoft has tuned it well for instruction
+following. Both are available with a single `ollama pull` command.
+
+<Note>
+If you don't have a discrete GPU, both models run on CPU — just slower. Phi-4 Mini will feel
+more responsive in that scenario due to its smaller size.
+</Note>
+
+## What we are not building (yet)
+
+- Multi-turn conversation memory across sessions
+- Authentication handling from scratch (Playwright reuses the existing browser session)
+- A UI — this is a background process that speaks
+
+---
+
+# 3. Implementation
+
+## 3.1 Dependencies
+
+```bash
+pip install ollama faster-whisper pyaudio piper-tts playwright httpx \
+            beautifulsoup4 requests pvporcupine
+playwright install chromium
+ollama pull llama3.1
+```
+
+<Note>
+`pyaudio` requires PortAudio. On Windows: `pip install pipwin && pipwin install pyaudio`.
+Alternatively, download the prebuilt wheel from Christoph Gohlke's repository.
+</Note>
+
+## 3.2 Speech-to-Text with faster-whisper
+
+`faster-whisper` is a reimplementation of OpenAI's Whisper using CTranslate2 — significantly
+faster than the original, and runs entirely locally.
+
+```python
+from faster_whisper import WhisperModel
+
+# "base" is fast and accurate enough for short commands
+# Use "small" if you need better accuracy on noisy environments
+model = WhisperModel("base", device="cuda", compute_type="float16")
+# CPU fallback:
+# model = WhisperModel("base", device="cpu", compute_type="int8")
+
+def transcribe(audio_path: str) -> str:
+    segments, _ = model.transcribe(audio_path, beam_size=5)
+    return " ".join(s.text.strip() for s in segments)
+```
+
+## 3.3 Audio capture
+
+We need to record audio from the microphone until the user stops speaking. A simple
+energy-based VAD (voice activity detection) approach works well for a quiet office
+environment:
+
+```python
+import pyaudio
+import wave
+import numpy as np
+
+RATE       = 16000
+CHUNK      = 1024
+SILENCE_DB = 40      # dB threshold below which we consider silence
+SILENCE_S  = 1.5     # seconds of silence before we stop recording
+
+def record_command(output_path="command.wav") -> str:
+    pa  = pyaudio.PyAudio()
+    stream = pa.open(format=pyaudio.paInt16, channels=1,
+                     rate=RATE, input=True, frames_per_buffer=CHUNK)
+    frames, silent_chunks = [], 0
+    silence_limit = int(RATE / CHUNK * SILENCE_S)
+
+    print("Listening...")
+    while True:
+        data  = stream.read(CHUNK)
+        frames.append(data)
+        rms   = np.sqrt(np.mean(np.frombuffer(data, dtype=np.int16).astype(np.float32) ** 2))
+        db    = 20 * np.log10(rms + 1e-6)
+        if db < SILENCE_DB:
+            silent_chunks += 1
+        else:
+            silent_chunks = 0
+        if silent_chunks >= silence_limit and len(frames) > silence_limit:
+            break
+
+    stream.stop_stream(); stream.close(); pa.terminate()
+
+    with wave.open(output_path, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(pa.get_sample_size(pyaudio.paInt16))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+
+    return output_path
+```
+
+## 3.4 Wake word detection
+
+The simplest approach that doesn't require a third-party service is checking whether the
+transcription starts with your agent's name. It's not instant — Whisper has to process the
+audio first — but it works:
+
+```python
+WAKE_WORD = "jarvis"  # or whatever you name it
+
+def contains_wake_word(text: str) -> bool:
+    return text.lower().strip().startswith(WAKE_WORD)
+
+def strip_wake_word(text: str) -> str:
+    words = text.lower().strip().split()
+    if words and words[0] == WAKE_WORD:
+        return " ".join(words[1:]).strip()
+    return text.strip()
+```
+
+<Note>
+For lower-latency wake word detection, [Porcupine](https://picovoice.ai/platform/porcupine/)
+by Picovoice runs on-device and detects the wake word before Whisper is ever invoked.
+The free tier supports one custom wake word. Wiring it in replaces the always-recording loop
+with an efficient keyword-triggered one.
+</Note>
+
+## 3.5 Defining tools
+
+Tools are Python functions paired with a JSON schema that describes them to the model. Ollama
+follows the OpenAI tool-calling format:
+
+```python
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "control_displays",
+            "description": (
+                "Turn the SOC display monitors on or off, or check their current state. "
+                "Use when the user asks to start, wake, turn on, shut down, or turn off monitors."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["on", "off"],
+                        "description": "Whether to turn displays on or off."
+                    }
+                },
+                "required": ["action"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_jira",
+            "description": (
+                "Search Jira tickets by keyword, topic, or person. "
+                "Use when the user asks about a ticket, an issue, or what someone said about a topic."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Natural language search query, e.g. 'blocking traffic on weekends Andrew'"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_dashboard",
+            "description": (
+                "Read a value or metric from an authenticated security dashboard. "
+                "Use for questions like asset counts, active alert counts, or any metric "
+                "visible on the SOC displays."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "dashboard": {
+                        "type": "string",
+                        "enum": ["sentinelone", "jira", "darktrace"],
+                        "description": "Which dashboard to read from."
+                    },
+                    "metric": {
+                        "type": "string",
+                        "description": "What to look for, e.g. 'total enrolled assets', 'open ticket count'"
+                    }
+                },
+                "required": ["dashboard", "metric"]
+            }
+        }
+    }
+]
+```
+
+## 3.6 Tool implementations
+
+### Display control
+
+```python
+import subprocess
+
+def control_displays(action: str) -> str:
+    if action == "off":
+        subprocess.run([
+            "powershell", "-Command",
+            "Disable-ScheduledTask -TaskName 'SOC-Display-Shutdown'; shutdown /s /t 60"
+        ])
+        return "Displays shutting down in 60 seconds."
+    elif action == "on":
+        subprocess.run([
+            "powershell", "-Command",
+            "Enable-ScheduledTask -TaskName 'SOC-Display-Launch'"
+        ])
+        return "Display launch task re-enabled."
+    return "Unknown action."
+```
+
+### Jira search
+
+```python
+import requests, os
+
+JIRA_BASE = os.getenv("JIRA_BASE_URL")   # e.g. https://yourorg.atlassian.net
+JIRA_USER = os.getenv("JIRA_USER")
+JIRA_TOKEN = os.getenv("JIRA_API_TOKEN")
+
+def search_jira(query: str) -> str:
+    # Build a JQL query from the natural language input
+    # The LLM already parsed intent; we do a broad text search here
+    jql = f'text ~ "{query}" ORDER BY updated DESC'
+    resp = requests.get(
+        f"{JIRA_BASE}/rest/api/3/search",
+        params={"jql": jql, "maxResults": 3, "fields": "summary,description,comment"},
+        auth=(JIRA_USER, JIRA_TOKEN),
+        timeout=10
+    )
+    if resp.status_code != 200:
+        return f"Jira search failed: {resp.status_code}"
+
+    issues = resp.json().get("issues", [])
+    if not issues:
+        return "No matching tickets found."
+
+    results = []
+    for issue in issues:
+        key     = issue["key"]
+        summary = issue["fields"]["summary"]
+        # Pull most recent comment if available
+        comments = issue["fields"].get("comment", {}).get("comments", [])
+        last_comment = comments[-1]["body"] if comments else "No comments."
+        results.append(f"{key}: {summary}\nLatest comment: {last_comment}")
+
+    return "\n\n".join(results)
+```
+
+### Browser read with Playwright
+
+```python
+from playwright.sync_api import sync_playwright
+import os
+
+PROFILE = os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\Edge\User Data')
+
+DASHBOARD_URLS = {
+    "sentinelone": "https://your-s1-console.com",
+    "jira":        "https://yourorg.atlassian.net",
+    "darktrace":   "https://your-darktrace.com",
+}
+
+def read_dashboard(dashboard: str, metric: str) -> str:
+    url = DASHBOARD_URLS.get(dashboard)
+    if not url:
+        return f"Unknown dashboard: {dashboard}"
+
+    with sync_playwright() as p:
+        ctx = p.chromium.launch_persistent_context(
+            user_data_dir=PROFILE,
+            channel='msedge',
+            headless=True,   # headless OK for reads -- won't affect the display
+        )
+        page = ctx.new_page()
+        page.goto(url, wait_until="networkidle")
+        # Get the full visible text and let the LLM extract the metric
+        text = page.inner_text("body")
+        ctx.close()
+
+    # Return a trimmed excerpt -- the LLM will pull out the relevant number
+    return text[:3000]
+```
+
+<Important>
+`headless=True` is fine for reads — it doesn't affect the display windows already open.
+However, if the session requires a visible browser to stay authenticated, flip it to `False`
+and run in a separate process so it doesn't steal focus from the dashboards.
+</Important>
+
+## 3.7 The LLM loop
+
+This is where the pieces connect. We send the transcribed command to Ollama with the tool
+definitions. If the model decides to call a tool, we execute it and send the result back.
+The model then formulates a spoken response.
+
+```python
+import ollama
+import json
+
+MODEL = "llama3.1"
+
+TOOL_FUNCTIONS = {
+    "control_displays": control_displays,
+    "search_jira":      search_jira,
+    "read_dashboard":   read_dashboard,
+}
+
+SYSTEM_PROMPT = """You are a concise voice assistant for a security operations center.
+Answer in one or two sentences. If you call a tool, summarize the result clearly and briefly.
+Do not repeat the user's question back to them."""
+
+def run_agent(command: str) -> str:
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user",   "content": command},
+    ]
+
+    response = ollama.chat(
+        model=MODEL,
+        messages=messages,
+        tools=TOOLS,
+    )
+
+    msg = response["message"]
+
+    # No tool call -- model answered directly
+    if not msg.get("tool_calls"):
+        return msg["content"]
+
+    # Execute each tool call
+    for call in msg["tool_calls"]:
+        name   = call["function"]["name"]
+        args   = call["function"]["arguments"]
+        fn     = TOOL_FUNCTIONS.get(name)
+        result = fn(**args) if fn else f"Tool {name} not found."
+
+        messages.append(msg)  # append assistant message with tool_calls
+        messages.append({
+            "role":    "tool",
+            "content": result,
+        })
+
+    # Second pass -- model formulates spoken response from tool result
+    final = ollama.chat(model=MODEL, messages=messages)
+    return final["message"]["content"]
+```
+
+## 3.8 Text-to-speech with Piper
+
+[Piper](https://github.com/rhasspy/piper) is a fast local TTS engine. Download a voice model
+from the Piper releases page (`.onnx` + `.json` pair) and call it via subprocess:
+
+```python
+import subprocess, tempfile, os
+
+PIPER_EXE   = r"C:\SOC\piper\piper.exe"
+PIPER_MODEL = r"C:\SOC\piper\en_US-lessac-medium.onnx"
+
+def speak(text: str):
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+        out_path = f.name
+
+    subprocess.run([
+        PIPER_EXE,
+        "--model",  PIPER_MODEL,
+        "--output_file", out_path,
+    ], input=text.encode(), check=True)
+
+    # Play the wav file
+    subprocess.run(["powershell", "-c", f'(New-Object Media.SoundPlayer "{out_path}").PlaySync()'])
+    os.unlink(out_path)
+```
+
+## 3.9 The main loop
+
+Everything above comes together in a single listening loop:
+
+```python
+import time
+
+def main():
+    print("SOC Assistant ready. Say the wake word to begin.")
+    while True:
+        try:
+            audio_path = record_command()
+            text       = transcribe(audio_path)
+            print(f"Heard: {text}")
+
+            if not contains_wake_word(text):
+                continue
+
+            command  = strip_wake_word(text)
+            if not command:
+                speak("Yes?")
+                # Record the actual command on a second pass
+                audio_path = record_command()
+                command    = transcribe(audio_path)
+
+            print(f"Command: {command}")
+            response = run_agent(command)
+            print(f"Response: {response}")
+            speak(response)
+
+        except KeyboardInterrupt:
+            print("Shutting down.")
+            break
+        except Exception as e:
+            print(f"Error: {e}")
+            time.sleep(1)
+
+if __name__ == "__main__":
+    main()
+```
+
+## 3.10 Running it as a Windows service
+
+For the assistant to start automatically on login alongside the display automation, register
+it as a scheduled task the same way we did for the browser launch:
+
+```powershell
+$action = New-ScheduledTaskAction `
+    -Execute  "python.exe" `
+    -Argument "C:\SOC\assistant.py"
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+Register-ScheduledTask `
+    -TaskName "SOC-AI-Assistant" `
+    -Action   $action `
+    -Trigger  $trigger `
+    -RunLevel Highest `
+    -Force
+```
+
+<Note>
+Give it a 10-second startup delay (`Start-Sleep 10` at the top of the script) so Ollama has
+time to load the model before the first request comes in.
+</Note>
+
+---
+
+# Where This Goes Next
+
+The loop above is minimal by design. From here, the natural extensions are:
+
+- **Persistent conversation context** — carry the last N turns so follow-up questions work
+  naturally (*"what about the one Andrew commented on last Tuesday?"*)
+- **Porcupine wake word** — replace the always-transcribing loop with efficient on-device
+  keyword detection so Whisper only runs when it needs to
+- **More tools** — anything with an API or a web interface is fair game: CVE lookups,
+  firewall rule checks, alert triage queries
+- **Scheduled briefings** — at 8am each morning, the assistant summarizes overnight alerts
+  and open tickets unprompted
+
+The foundation is in place. The stack is local, the tools are modular, and adding a new
+capability is just writing a Python function and a JSON schema.
