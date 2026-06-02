@@ -77,7 +77,7 @@ const projects = [
   },
   {
     name: 'ChipNeMo DAPT Pipeline',
-    href: 'https://github.com/dsuyu1',
+    href: 'https://damianvillarreal.com/n/4',
     summary: "Reproduced NVIDIA's domain-adaptive pre-training pipeline for Llama 2 7B.",
   },
   {
