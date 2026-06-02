@@ -93,18 +93,7 @@ Per test case:
 
 Overall: `O(n log totalSum)` per test case with `sum(n) <= 2e5`.
 
-# Why C++ (and not Python/PyPy here)
-
-This problem is tight `O(n log totalSum)` integer DP with heavy looping and random access over big arrays. Even with the right algorithm, Python/PyPy often time out due to interpreter overhead inside those loops.
-
-C++ tends to be the default in contests for this kind of task because:
-- the loops compile to optimized machine code
-- `vector<int>` / `vector<long long>` are contiguous and cache-friendly
-- fast buffered I/O is straightforward
-
-Rust can also be fast enough, but C++ usually has the smoothest contest workflow and the biggest library/pattern ecosystem.
-
-# Reference Implementation (C++)
+# Implementation
 
 ```cpp
 // Accepted solution for CF 2228F
@@ -326,3 +315,11 @@ int main() {
     return 0;
 }
 ```
+
+## A quick note
+
+As somebody who's new to competitive programming problems, I intially tried coding the solution in Python. However, even with PyPy, I couldn't get the thing to finish the test cases without timing out. Even with the right algorithm, Python/PyPy often time out due to interpreter overhead.
+
+I thought about Rust, and it can also be fast enough, but C++ usually has the smoothest contest workflow and the biggest library/pattern ecosystem. 
+
+Props to Claude for helping me crack this one. My original Python implementation couldn't get past the first few tests..but even Claude had trouble with this problem. I had to give it a few pointers, and it was more like having a decent programming buddy than anything. Also, I'm a C++ noob and Python abuser, so there's that.
