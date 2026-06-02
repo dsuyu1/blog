@@ -28,13 +28,13 @@ const posts: Post[] = [
     date: 'May 31, 2026',
     tag: 'codeforces',
   },
-  {
-    title: 'AWS DevOps Agent Workshop for Incident Investigation',
-    href: '/n/7',
-    preview: 'Learning how to use the AWS DevOps Agent for incident investigation.',
-    date: 'June 1, 2026',
-    tag: 'aws',
-  },
+  // {
+  //   title: 'AWS DevOps Agent Workshop for Incident Investigation',
+  //   href: '/n/7',
+  //   preview: 'Learning how to use the AWS DevOps Agent for incident investigation.',
+  //   date: 'June 1, 2026',
+  //   tag: 'aws',
+  // },
 ];
 
 const sorted = (tag?: 'codeforces' | 'aws') =>
