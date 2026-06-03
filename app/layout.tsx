@@ -7,7 +7,7 @@ import { Analytics } from '@vercel/analytics/react';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://next-mdx-blog.vercel.app'),
+  metadataBase: new URL('https://damianvillarreal.com'),
   alternates: {
     canonical: '/'
   },
@@ -52,6 +52,9 @@ function Nav() {
       </a>
       <a href="/about" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
         about
+      </a>
+      <a href="https://security.damianvillarreal.com" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+        security
       </a>
     </nav>
   );

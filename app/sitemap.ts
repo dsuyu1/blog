@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 
-const SITE_URL = 'https://damian.villarreal.com';
+const SITE_URL = 'https://damianvillarreal.com';
 
 async function getNoteSlugs(dir: string) {
   const entries = await fs.readdir(dir, {
