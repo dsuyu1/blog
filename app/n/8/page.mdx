@@ -5,26 +5,13 @@ export const metadata = {
   },
 };
 
-# Executive Summary
+# Summary
 
 Automates the full display stack on Windows-based SOC machines: scheduled power, unattended
-login, browser launch, and SSO authentication. Each layer is independent — deploy as much or
-as little as needed. A local AI assistant layer (covered in [Part 6](/n/9)) builds on top of
-this infrastructure.
+login, browser launch, and SSO authentication. Each layer is independent; you can deploy as much or
+as little as needed. I've also laid the groundwork for a local AI assistant layer, covered in [Part 6](/n/9).
 
-<Table data={{
-  headers: ["Layer", "Tool", "Purpose"],
-  rows: [
-    ["Power", "BIOS RTC / WoL + Task Scheduler", "Wake at 8am, shut down at 5pm"],
-    ["Login", "Sysinternals Autologon", "Unattended Windows login"],
-    ["Browser", "Edge + Task Scheduler", "Launch dashboards fullscreen on logon"],
-    ["SSO", "Playwright", "Handle identity provider button clicks"],
-  ]
-}} />
-
----
-
-# Part 1: Scheduled Power — Wake and Shutdown
+# Part 1: Scheduled Power
 
 ## Wake: BIOS Scheduled Power-On
 
@@ -95,7 +82,7 @@ quick toggling without opening Task Scheduler. These can be wired to voice comma
 
 Do not use the raw registry approach (`DefaultPassword` in plaintext). Use
 [Autologon.exe](https://learn.microsoft.com/en-us/sysinternals/downloads/autologon) from
-Microsoft Sysinternals — it stores credentials encrypted via LSA secrets.
+Microsoft Sysinternals; it stores credentials encrypted via LSA secrets.
 
 ```powershell
 # GUI: run autologon.exe and fill in the form
@@ -118,8 +105,7 @@ logged in with no further steps.
 ## Security Considerations
 
 <Important>
-Use a dedicated service account with read-only dashboard access — not a personal or admin
-account.
+Use a dedicated service account with read-only dashboard access, not a personal or admin account.
 </Important>
 
 - Enable screen lock on idle if displays are accessible to non-staff.
@@ -173,8 +159,7 @@ Prefer **Edge** in enterprise environments:
 ## Testing SSO Behavior
 
 Before relying on silent auth, test each dashboard URL on a clean session and note which
-require a button click. Those that authenticate silently need no further work. Those that
-require interaction are handled by Playwright in Part 4.
+require a button click. Dashboards that authenticate silently need no further work; the rest go through Playwright in Part 4.
 
 <Note>
 Once one SSO session is established, subsequent dashboards on the same identity provider
@@ -186,8 +171,7 @@ interaction.
 
 # Part 4: Playwright for SSO Prompts
 
-Handles identity provider login buttons deterministically — no image recognition, no
-hardcoded coordinates, no AI. Selectors are DOM-based and fault-tolerant.
+In this architecture, [Playwright](https://playwright.dev/) handles identity provider login buttons.
 
 ## Setup
 

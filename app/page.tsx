@@ -34,12 +34,12 @@ const posts: Post[] = [
     date: 'May 31, 2026',
     tag: 'codeforces',
   },
-  // {
-  //   title: 'Automating SOC Visibility on External Monitors',
-  //   href: '/n/8',
-  //   preview: 'Part 1/2: Scheduled power-on, Sysinternals autologon, SSO, and Playwright.',
-  //   date: 'June 2, 2026',
-  // },
+  {
+    title: 'Automating SOC Visibility on External Monitors',
+    href: '/n/8',
+    preview: 'Part 1/2: Scheduled power-on, Sysinternals autologon, SSO, and Playwright.',
+    date: 'June 2, 2026',
+  },
   // {
   //   title: 'Voice-enabled Local AI Agent Assistant for SecOps',
   //   href: '/n/9',
