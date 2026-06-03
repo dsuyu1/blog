@@ -8,8 +8,7 @@ export const metadata = {
 # Executive Summary
 
 Builds a locally-hosted voice assistant for security operations using open-source components.
-No cloud dependencies. The model reasons over defined tools and invokes them on demand —
-no training or fine-tuning required.
+No cloud dependencies. The model reasons over defined tools and invokes them on demand, with no training or fine-tuning required.
 
 <Table data={{
   headers: ["Component", "Tool", "Role"],
@@ -55,8 +54,7 @@ Text-to-speech  ──  Kokoro
 Speaker output
 ```
 
-The LLM does not answer questions directly — it selects a tool and arguments. Python executes
-the tool and passes the result back. The model then formulates a spoken response.
+The LLM does not answer questions directly. It selects a tool and arguments, Python executes the tool and passes the result back, and the model formulates a spoken response.
 
 ## Model Selection
 
@@ -311,7 +309,7 @@ def read_dashboard(dashboard: str, metric: str) -> str:
 ```
 
 <Important>
-`headless=True` is fine for reads — it does not affect the display windows already open.
+`headless=True` is fine for reads and does not affect the display windows already open.
 Flip to `False` and run in a separate process if the session requires a visible browser to
 stay authenticated.
 </Important>
