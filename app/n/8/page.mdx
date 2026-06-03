@@ -17,9 +17,9 @@ as little as needed. I've also laid the groundwork for a local AI assistant laye
 
 PowerShell cannot turn on a fully powered-off machine. Use one of:
 
-- **BIOS/UEFI RTC Wake (Recommended)** — Set a daily wake time in firmware under Power
+- **[BIOS/UEFI RTC Wake](https://learn.microsoft.com/en-us/answers/questions/4086036/how-to-set-up-your-computer-to-turn-on-automatical) (Recommended)** — Set a daily wake time in firmware under Power
   Management. Labels vary: "Auto Power On", "Scheduled Boot", "RTC Alarm".
-- **Wake-on-LAN (WoL)** — Requires machines left in sleep/hibernate. A server sends a magic
+- **[Wake-on-LAN](https://learn.microsoft.com/en-us/answers/questions/3872280/wake-on-lan-(wol)) (WoL)** — Requires machines left in sleep/hibernate. A server sends a magic
   packet to wake them. Requires WoL enabled in BIOS and on the network adapter.
 
 ### Enabling WoL via PowerShell
