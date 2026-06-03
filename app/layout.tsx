@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     default: 'Damian Villarreal',
     template: '%s | Damian Villarreal'
   },
-  description: 'My portfolio, blog, and personal website.'
+
 };
 
 export default function RootLayout({
