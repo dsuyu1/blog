@@ -5,12 +5,15 @@ import { ThemeToggle } from "./theme-toggle";
 
 function Nav() {
   return (
-    <nav className="flex items-center gap-6">
+    <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
       <a href="/" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
         blog
       </a>
       <a href="/portfolio" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
         portfolio
+      </a>
+      <a href="/learning" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+        learning
       </a>
       <a href="/about" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
         about
