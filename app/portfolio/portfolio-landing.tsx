@@ -449,10 +449,9 @@ function Presentations() {
       type: "AI Security",
     },
     {
-      // TODO: confirm the exact talk title with Damian (phrasing is a placeholder).
-      title: "Hands-On with the Empire C2 Framework",
+      title: "Empire C2",
       event: "6th Annual BSides RGV",
-      date: "2025",
+      date: "May 31, 2025",
       type: "Red Team",
     },
     {
