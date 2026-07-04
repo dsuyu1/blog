@@ -2,10 +2,11 @@
    Hand-rolled (lucide-style, stroke-based) to match the site's existing
    inline-SVG convention and avoid adding an icon dependency. */
 
-type IconProps = { className?: string };
+type IconProps = { className?: string; style?: React.CSSProperties };
 
 function Stroke({
   className,
+  style,
   children,
 }: IconProps & { children: React.ReactNode }) {
   return (
@@ -18,6 +19,7 @@ function Stroke({
       strokeLinejoin="round"
       aria-hidden="true"
       className={className}
+      style={style}
     >
       {children}
     </svg>
@@ -67,9 +69,9 @@ export function ArrowRight({ className }: IconProps) {
   );
 }
 
-export function ChevronDown({ className }: IconProps) {
+export function ChevronDown({ className, style }: IconProps) {
   return (
-    <Stroke className={className}>
+    <Stroke className={className} style={style}>
       <path d="m6 9 6 6 6-6" />
     </Stroke>
   );
