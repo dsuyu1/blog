@@ -204,7 +204,7 @@ function Hero({ scrollY }: { scrollY: number }) {
           transition={{ duration: 0.8, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
           className="text-[17px] text-neutral-400 mb-5 font-light tracking-[-0.01em]"
         >
-          Security Operations&nbsp;&nbsp;→&nbsp;&nbsp;Cloud &amp; AI Security Architecture
+          Security Operations&nbsp;&nbsp;,&nbsp;&nbsp;Cloud &amp; AI Security Architecture
         </motion.p>
 
         <motion.p

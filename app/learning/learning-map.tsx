@@ -25,7 +25,7 @@ const data = {
         { name: "BGP", status: "learning" },
         { name: "OSPF", status: "planned" },
         { name: "VPN / IPSec site-to-site", status: "planned" },
-        { name: "Direct Connect / ExpressRoute / Interconnect", status: "planned" },
+        { name: "Direct Connect / ExpressRoute / Interconnect", status: "learning" },
         { name: "Transit Gateway / Virtual WAN / NCC", status: "planned" },
         { name: "SD-WAN (Viptela, VeloCloud, Fortinet, Prisma)", status: "planned" },
         { name: "SASE (Zscaler, Netskope, Cloudflare)", status: "planned" },
@@ -46,7 +46,7 @@ const data = {
       name: "Infrastructure as Code",
       status: "category",
       children: [
-        { name: "Terraform", status: "planned" },
+        { name: "Terraform", status: "learning" },
         { name: "Pulumi", status: "planned" },
         { name: "CloudFormation / ARM / Deployment Manager", status: "planned" },
       ],
@@ -55,15 +55,15 @@ const data = {
       name: "Data Layer",
       status: "category",
       children: [
-        { name: "Cassandra (DataStax)", status: "planned" },
-        { name: "Kafka (Confluent)", status: "planned" },
+        { name: "Cassandra (DataStax)", status: "learning" },
+        { name: "Kafka (Confluent)", status: "learning" },
       ],
     },
     {
       name: "Identity & Secrets",
       status: "category",
       children: [
-        { name: "Azure AD / Entra ID", status: "planned" },
+        { name: "Azure AD / Entra ID", status: "learning" },
         { name: "Okta / Ping Identity", status: "planned" },
         { name: "HashiCorp Vault", status: "planned" },
         { name: "CyberArk (PAM)", status: "planned" },
@@ -86,7 +86,7 @@ const data = {
         { name: "Splunk", status: "learning" },
         { name: "Prometheus / Grafana", status: "planned" },
         { name: "OpenTelemetry", status: "planned" },
-        { name: "ELK / OpenSearch", status: "planned" },
+        { name: "ELK / OpenSearch", status: "learning" },
       ],
     },
     {
