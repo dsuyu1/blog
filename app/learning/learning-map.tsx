@@ -360,7 +360,7 @@ export default function LearningMap() {
         <div
           ref={ref}
           className="w-full cursor-grab active:cursor-grabbing"
-          style={{ height: 640, background: "var(--map-bg)" }}
+          style={{ height: "calc(100vh - 16rem)", minHeight: 520, background: "var(--map-bg)" }}
         />
       </div>
 
