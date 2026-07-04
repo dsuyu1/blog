@@ -29,6 +29,14 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* When the ThreatScaper-style dot cursor is mounted, hide the native cursor
+   so the trailing dot is the only pointer. Added by DotCursor on fine-pointer
+   devices; if JS never runs, the native cursor is preserved. */
+.dot-cursor-active,
+.dot-cursor-active * {
+  cursor: none !important;
+}
+
 body {
   text-rendering: optimizeLegibility;
 }

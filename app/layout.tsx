@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import { SiteChrome } from "./components/site-chrome";
+import { DotCursor } from "./components/dot-cursor";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -50,6 +51,7 @@ export default function RootLayout({
           })();
         `}</Script>
         <SiteChrome>{children}</SiteChrome>
+        <DotCursor />
         <Analytics />
       </body>
     </html>
