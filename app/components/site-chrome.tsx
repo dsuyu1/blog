@@ -36,6 +36,9 @@ function Nav() {
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const bare = pathname === "/portfolio" || pathname?.startsWith("/portfolio/");
+  // The learning roadmap spreads across the full width; keep the nav but drop
+  // the standard reading-column cap.
+  const wide = pathname === "/learning" || pathname?.startsWith("/learning/");
 
   if (bare) {
     return <>{children}</>;
@@ -49,7 +52,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       <div className="min-h-screen flex flex-col pt-8 p-8">
-        <div className="max-w-[90ch] mx-auto w-full">
+        <div className={`mx-auto w-full ${wide ? "max-w-none" : "max-w-[90ch]"}`}>
           <main className="space-y-6">{children}</main>
         </div>
       </div>
