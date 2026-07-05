@@ -109,10 +109,11 @@ const data = {
   ],
 };
 
+/* Apple system palette: green / orange / gray. */
 const STATUS = [
-  { key: "done", label: "Done", color: "#10b981" },
-  { key: "learning", label: "Learning now", color: "#f59e0b" },
-  { key: "planned", label: "Planned", color: "#71717a" },
+  { key: "done", label: "Done", color: "#30d158" },
+  { key: "learning", label: "Learning now", color: "#ff9f0a" },
+  { key: "planned", label: "Planned", color: "#98989d" },
 ];
 
 /* Node fill by status. Root/category resolve to CSS variables so they follow
@@ -120,12 +121,12 @@ const STATUS = [
 function colorFor(status: string): string {
   const map: Record<string, string> = {
     root: "var(--map-text)",
-    category: "#3b82f6",
-    done: "#10b981",
-    learning: "#f59e0b",
-    planned: "#71717a",
+    category: "var(--map-accent)",
+    done: "#30d158",
+    learning: "#ff9f0a",
+    planned: "#98989d",
   };
-  return map[status] || "#71717a";
+  return map[status] || "#98989d";
 }
 
 /* Load D3 once from CDN (kept out of the bundle — no npm dependency). */
@@ -295,8 +296,18 @@ function buildMap(d3: any, container: HTMLElement) {
 }
 
 const mapCss = `
-.learning-map { --map-bg: #ffffff; --map-text: #18181b; --map-link: #e4e4e7; }
-.dark .learning-map { --map-bg: #09090b; --map-text: #e4e4e7; --map-link: #27272a; }
+.learning-map {
+  --map-bg: rgba(255, 255, 255, 0.75);
+  --map-text: #1d1d1f;
+  --map-link: rgba(0, 0, 0, 0.14);
+  --map-accent: #007aff;
+}
+.dark .learning-map {
+  --map-bg: rgba(12, 12, 14, 0.75);
+  --map-text: #e4e4e7;
+  --map-link: rgba(255, 255, 255, 0.16);
+  --map-accent: #0a84ff;
+}
 .learning-map .node circle { stroke-width: 2px; cursor: pointer; }
 .learning-map .node text {
   font-size: 12px;
@@ -338,17 +349,19 @@ export default function LearningMap() {
       <style>{mapCss}</style>
 
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Multi-Cloud &amp; Hybrid Cloud Architecture</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Multi-Cloud &amp; Hybrid Cloud Architecture
+        </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           What I&apos;m learning, tool by tool — click a branch to expand.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex flex-wrap gap-2 text-xs">
         {STATUS.map((s) => (
-          <span key={s.key} className="inline-flex items-center gap-1.5">
+          <span key={s.key} className="apple-gloss-badge gap-1.5">
             <span
-              className="w-2.5 h-2.5 rounded-full"
+              className="w-2 h-2 rounded-full"
               style={{ background: s.color }}
             />
             {s.label}
@@ -356,11 +369,11 @@ export default function LearningMap() {
         ))}
       </div>
 
-      <div className="rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden">
+      <div className="glass-card overflow-hidden">
         <div
           ref={ref}
           className="w-full cursor-grab active:cursor-grabbing"
-          style={{ height: "calc(100vh - 16rem)", minHeight: 520, background: "var(--map-bg)" }}
+          style={{ height: "calc(100vh - 16rem)", minHeight: 520 }}
         />
       </div>
 

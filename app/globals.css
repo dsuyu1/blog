@@ -4,10 +4,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-family-sans: 'Inter', sans-serif;
+  /* Apple system stack: genuine SF Pro on Apple devices, Inter elsewhere. */
+  --font-family-sans: -apple-system, BlinkMacSystemFont, var(--font-inter, 'Inter'),
+    'Segoe UI', sans-serif;
 }
 
 :root {
+  /* Glass material recipes. Kept in variables because Lightning CSS (the
+     Tailwind v4 minifier) strips literal backdrop-filter declarations from
+     custom rules; var() values pass through unparsed. */
+  --glass-material: blur(24px) saturate(1.6);
+  --glass-material-thin: blur(20px) saturate(1.8);
+  --glass-material-badge: blur(12px);
+
   --sh-class: #7aa2f7;
   --sh-sign: #89ddff;
   --sh-string: #9ece6a;
@@ -27,14 +36,187 @@
 html {
   min-width: 360px;
   scrollbar-gutter: stable;
+  font-family: -apple-system, BlinkMacSystemFont, var(--font-inter, 'Inter'),
+    'Segoe UI', sans-serif;
 }
 
-/* When the ThreatScaper-style dot cursor is mounted, hide the native cursor
-   so the trailing dot is the only pointer. Added by DotCursor on fine-pointer
-   devices; if JS never runs, the native cursor is preserved. */
-.dot-cursor-active,
-.dot-cursor-active * {
-  cursor: none !important;
+/* ── Apple-style primitives ─────────────────────────────── */
+
+/* Liquid-glass surface (light + dark). */
+.glass-card {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 1.25rem;
+  /* backdrop-filter comes from the raw <style> in layout.tsx — the Tailwind
+     pipeline mangles it here. */
+}
+.dark .glass-card {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Scroll fade-in, Apple product-page style. Applied via <Reveal>. */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px) scale(0.99);
+  transition:
+    opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Apple liquid-glass buttons & badges ─────────────────── */
+/* Light styles are the default (this site has no .light class — light mode
+   is simply the absence of .dark); .dark overrides follow each rule. */
+
+/* Primary: Apple's filled pill (apple.com / App Store style). */
+.apple-gloss-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  border-radius: 9999px;
+  padding: 0.55rem 1.35rem;
+  font-size: 0.8125rem;
+  color: #fff;
+  background: #0071e3;
+  border: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 2.5px rgba(0, 0, 0, 0.15);
+  transition:
+    background 0.2s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.apple-gloss-btn:hover {
+  background: #0077ed;
+  color: #fff;
+}
+.apple-gloss-btn:active {
+  background: #0068d1;
+  transform: scale(0.98);
+}
+.apple-gloss-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3.5px rgba(0, 113, 227, 0.35);
+}
+.dark .apple-gloss-btn {
+  background: #0a84ff;
+}
+.dark .apple-gloss-btn:hover {
+  background: #2492ff;
+}
+.dark .apple-gloss-btn:active {
+  background: #0071e3;
+}
+
+/* Secondary: translucent glass pill (visionOS material). */
+.apple-gloss-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  border-radius: 9999px;
+  padding: 0.55rem 1.35rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.045);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  /* backdrop-filter lives in layout.tsx's raw <style> */
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.apple-gloss-btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.14);
+  color: rgba(0, 0, 0, 0.95);
+}
+.apple-gloss-btn-secondary:active {
+  transform: scale(0.98);
+}
+.dark .apple-gloss-btn-secondary {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.085);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.dark .apple-gloss-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+/* Glass micro-badge (skills, certs, legends). */
+.apple-gloss-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  padding: 0.28rem 0.7rem;
+  border-radius: 9999px;
+  color: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  /* backdrop-filter lives in layout.tsx's raw <style> */
+}
+.dark .apple-gloss-badge {
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Pages loaded inside a desktop window (iframe) hide the standalone site nav;
+   the `embedded` class is set before paint by the theme-init script. */
+.embedded .site-nav {
+  display: none;
+}
+.embedded .page-backdrop {
+  display: none;
+}
+
+.embedded, .embedded body {
+  background: transparent !important;
+}
+
+
+/* Desktop windows scale in like macOS. */
+@keyframes window-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.window-pop {
+  animation: window-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 body {
@@ -50,13 +232,20 @@ h4 {
 
 pre {
   background-color: var(--codeblock-bg);
-  border-radius: 0.5rem;
+  border-radius: 0.9rem;
   overflow-x: auto;
   padding: 1rem;
   margin: 1.5rem 0;
   line-height: 1;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Glassy code blocks on the dark theme. */
+.dark pre {
+  background-color: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  /* backdrop-filter lives in layout.tsx's raw <style> */
 }
 
 pre::-webkit-scrollbar {
