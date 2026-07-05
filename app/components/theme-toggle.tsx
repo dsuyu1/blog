@@ -86,7 +86,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggle}
-      className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-gray-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/70 text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-900/50 transition-colors"
+      className="apple-gloss-btn-secondary !p-0 h-9 w-9 rounded-full flex items-center justify-center text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white"
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       title={theme === "dark" ? "Light mode" : "Dark mode"}
     >

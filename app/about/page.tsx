@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Bio from './bio.mdx';
+import { Reveal } from '../components/reveal';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -102,75 +103,79 @@ const certs = ['CompTIA Security+ ce', 'CompTIA Network+ ce', 'CompTIA CySA+ ce'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-4">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-        {title}
-      </h2>
-      {children}
-    </div>
+    <Reveal>
+      <section className="glass-card p-6 sm:p-7 space-y-4">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+          {title}
+        </h2>
+        {children}
+      </section>
+    </Reveal>
   );
 }
 
 export default function About() {
   return (
-    <div className="space-y-12">
+    <div className="space-y-6 pb-10">
       {/* Profile */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <img
-            src="/avatar.jpeg"
-            alt="Damian Villarreal"
-            className="w-32 h-32 rounded-full object-cover shrink-0"
-          />
-          <div>
-            <h1 className="text-xl font-semibold">Damian Villarreal</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            MSCS @ UTRGV
+      <Reveal>
+        <div className="glass-card p-6 sm:p-8 space-y-5">
+          <div className="flex items-center gap-5">
+            <img
+              src="/avatar.jpeg"
+              alt="Damian Villarreal"
+              className="w-28 h-28 rounded-full object-cover shrink-0 ring-1 ring-black/10 dark:ring-white/15 shadow-lg"
+            />
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight">Damian Villarreal</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                MSCS @ UTRGV
+              </p>
+            </div>
+          </div>
+          <p className="text-[15px] text-gray-600 dark:text-gray-300 leading-relaxed">
+            I like cybersecurity, AI research, and building useful things.
           </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href="https://github.com/dsuyu1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="apple-gloss-btn-secondary gap-1.5 text-xs py-1 px-3"
+            >
+              <GithubIcon />
+              github.com/dsuyu1
+            </a>
+            <a
+              href="https://linkedin.com/in/dsuyu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="apple-gloss-btn-secondary gap-1.5 text-xs py-1 px-3"
+            >
+              <LinkedinIcon />
+              linkedin.com/in/dsuyu
+            </a>
+            <a
+              href="https://codeforces.com/profile/funnybunny67"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="apple-gloss-btn-secondary gap-1.5 text-xs py-1 px-3"
+            >
+              <CodeforcesIcon />
+              codeforces.com/funnybunny67
+            </a>
+            <a
+              href="https://www.kaggle.com/dsuyu1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="apple-gloss-btn-secondary gap-1.5 text-xs py-1 px-3"
+            >
+              <KaggleIcon />
+              kaggle.com/dsuyu1
+            </a>
           </div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-          I like cybersecurity, AI research, and building useful things.
-        </p>
-        <div className="flex items-center gap-4">
-          <a
-            href="https://github.com/dsuyu1"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >
-            <GithubIcon />
-            github.com/dsuyu1
-          </a>
-          <a
-            href="https://linkedin.com/in/dsuyu"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >
-            <LinkedinIcon />
-            linkedin.com/in/dsuyu
-          </a>
-          <a
-            href="https://codeforces.com/profile/funnybunny67"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >
-            <CodeforcesIcon />
-            codeforces.com/funnybunny67
-          </a>
-          <a
-            href="https://www.kaggle.com/dsuyu1"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >
-            <KaggleIcon />
-            kaggle.com/dsuyu1
-          </a>
-        </div>
-      </div>
+      </Reveal>
 
       {/* Bio */}
       <Section title="Bio">
@@ -181,7 +186,7 @@ export default function About() {
 
       {/* Experience */}
       <Section title="Experience">
-        <div className="space-y-4">
+        <div className="space-y-5">
           {experience.map((job) => (
             <div key={job.title} className="space-y-0.5">
               <div className="flex items-baseline justify-between gap-4">
@@ -197,16 +202,16 @@ export default function About() {
 
       {/* Projects */}
       <Section title="Projects">
-        <div className="space-y-4">
+        <div className="space-y-1">
           {projects.map((p) => (
             <a
               key={p.name}
               href={p.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="block group space-y-0.5"
+              className="block group space-y-0.5 -mx-3 px-3 py-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors"
             >
-              <p className="text-sm font-medium group-hover:text-blue-500 transition-colors">{p.name}</p>
+              <p className="text-sm font-medium group-hover:text-[#0a84ff] transition-colors">{p.name}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{p.summary}</p>
             </a>
           ))}
@@ -219,7 +224,7 @@ export default function About() {
           {certs.map((c) => (
             <span
               key={c}
-              className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+              className="apple-gloss-badge"
             >
               {c}
             </span>
@@ -229,10 +234,10 @@ export default function About() {
 
       {/* Skills */}
       <Section title="Skills">
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {skills.map((s) => (
             <div key={s.label} className="flex gap-3 text-sm">
-              <span className="text-gray-400 dark:text-gray-500 shrink-0 w-20">{s.label}</span>
+              <span className="text-gray-400 dark:text-gray-500 shrink-0 w-24">{s.label}</span>
               <span className="text-gray-600 dark:text-gray-300">{s.value}</span>
             </div>
           ))}

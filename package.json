@@ -9,6 +9,12 @@
     "start": "next start",
     "lint": "next lint"
   },
+  "browserslist": [
+    "chrome 111",
+    "edge 111",
+    "firefox 128",
+    "safari 18"
+  ],
   "dependencies": {
     "@next/mdx": "16.1.5",
     "@tailwindcss/postcss": "^4.1.8",
@@ -34,3 +40,4 @@
     "typescript": "^5.8.3"
   }
 }
+
