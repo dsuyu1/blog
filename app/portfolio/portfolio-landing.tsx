@@ -9,13 +9,15 @@ import {
   Cloud,
   Cpu,
   Mail,
-  Github,
-  Linkedin,
   ExternalLink,
   ArrowRight,
   ChevronDown,
-} from "./icons";
-import { GraphGlyph, SparkleGlyph } from "../desktop/glyphs";
+  Sparkles,
+  Network,
+} from "lucide-react";
+// Brand marks: lucide 1.x dropped Github/Linkedin (trademark), so keep the
+// hand-rolled filled versions.
+import { Github, Linkedin } from "./icons";
 
 /* Big Sur-style pastel icon tile (from the bigsur-icons reference in the
    user's UI/UX inspo folder): soft gradient superellipse, puffy white glyph. */
@@ -61,7 +63,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           : "bg-transparent border-transparent"
       }`}
     >
-      <div className="max-w-[900px] mx-auto px-6 h-[60px] flex items-center justify-between">
+      <div className="max-w-[1120px] mx-auto px-6 h-[60px] flex items-center justify-between">
         <Link
           href="/"
           className="text-sm font-medium text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white tracking-wide transition-colors duration-200"
@@ -74,6 +76,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
             { label: "Projects", href: "#projects" },
             { label: "Talks", href: "#talks" },
             { label: "Research", href: "#research" },
+            { label: "Skills", href: "#skills" },
           ].map((item) => (
             <a
               key={item.label}
@@ -131,7 +134,7 @@ function Hero({ scrollY }: { scrollY: number }) {
       />
 
       <div
-        className="relative z-10 max-w-[900px] mx-auto px-6 text-center"
+        className="relative z-10 max-w-[1120px] mx-auto px-6 text-center"
         style={{ transform: `translateY(${scrollY * 0.1}px)` }}
       >
         {/* availability badge */}
@@ -245,7 +248,7 @@ function Expertise() {
 
   return (
     <section id="expertise" className="py-28 relative z-10">
-      <div className="max-w-[900px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -315,7 +318,7 @@ function Projects() {
     },
     {
       name: "SOAR-EDR Automation Pipeline",
-      Icon: GraphGlyph,
+      Icon: Network,
       from: "#FFB86B",
       to: "#F78E3D",
       status: "Open Source",
@@ -326,7 +329,7 @@ function Projects() {
     },
     {
       name: "ChipNeMo DAPT Pipeline",
-      Icon: SparkleGlyph,
+      Icon: Sparkles,
       from: "#DDBDF8",
       to: "#B383EC",
       status: "Research",
@@ -350,7 +353,7 @@ function Projects() {
 
   return (
     <section id="projects" className="py-28 relative z-10">
-      <div className="max-w-[900px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -364,9 +367,10 @@ function Projects() {
           </h2>
         </motion.div>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {projects.map((p, i) => {
             const external = p.href.startsWith("http");
+            const flagship = p.status === "Flagship";
             return (
               <motion.a
                 key={p.name}
@@ -377,7 +381,7 @@ function Projects() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
                 viewport={{ once: true, margin: "-60px" }}
-                className="group flex gap-5 p-6 rounded-2xl border border-black/[0.08] dark:border-white/[0.1] bg-white/65 dark:bg-white/[0.055] backdrop-blur-xl hover:border-black/[0.16] dark:hover:border-white/[0.2] hover:bg-white/80 dark:hover:bg-white/[0.075] transition-all duration-300 cursor-pointer"
+                className={`group flex gap-5 p-6 rounded-2xl border border-black/[0.08] dark:border-white/[0.1] bg-white/65 dark:bg-white/[0.055] backdrop-blur-xl hover:border-black/[0.16] dark:hover:border-white/[0.2] hover:bg-white/80 dark:hover:bg-white/[0.075] transition-all duration-300 cursor-pointer ${flagship ? "md:col-span-2" : ""}`}
               >
                 <PastelTile from={p.from} to={p.to} className="w-11 h-11 rounded-[14px] shrink-0">
                   <p.Icon className="w-[22px] h-[22px] drop-shadow-[0_2px_2px_rgba(0,0,0,0.22)]" />
@@ -446,7 +450,7 @@ function Presentations() {
 
   return (
     <section id="talks" className="py-28 relative z-10">
-      <div className="max-w-[900px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -515,7 +519,7 @@ function Research() {
 
   return (
     <section id="research" className="py-28 relative z-10">
-      <div className="max-w-[900px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -562,12 +566,110 @@ function Research() {
   );
 }
 
+/* ─── Skills ────────────────────────────────────────────── */
+
+function Skills() {
+  const groups = [
+    {
+      label: "Languages",
+      Icon: Cpu,
+      from: "#A9CBFF",
+      to: "#6FA0F6",
+      items: ["Python", "PowerShell", "Bash"],
+    },
+    {
+      label: "Security",
+      Icon: Shield,
+      from: "#F2808A",
+      to: "#E05263",
+      items: [
+        "Splunk",
+        "SentinelOne",
+        "Microsoft Defender",
+        "Wazuh",
+        "TheHive / Cortex",
+        "LimaCharlie",
+        "Tines",
+        "Ghidra",
+      ],
+    },
+    {
+      label: "Cloud & Infrastructure",
+      Icon: Cloud,
+      from: "#93E0AC",
+      to: "#4EBE79",
+      items: [
+        "AWS",
+        "Azure",
+        "GCP",
+        "Docker",
+        "Kubernetes",
+        "Terraform",
+        "Cloudflare",
+        "Tailscale",
+        "Hyperledger",
+      ],
+    },
+    {
+      label: "AI / ML",
+      Icon: Sparkles,
+      from: "#DDBDF8",
+      to: "#B383EC",
+      items: ["NeMo", "Llama 2", "PyTorch", "Hugging Face", "Ollama", "LangChain"],
+    },
+  ];
+
+  return (
+    <section id="skills" className="py-28 relative z-10">
+      <div className="max-w-[1120px] mx-auto px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+          viewport={{ once: true, margin: "-80px" }}
+          className="mb-14"
+        >
+          <SectionLabel label="Toolbox" />
+          <h2 className="text-2xl font-semibold text-black/85 dark:text-white tracking-[-0.02em]">
+            Skills &amp; tools
+          </h2>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {groups.map((g, i) => (
+            <motion.div
+              key={g.label}
+              initial={{ opacity: 0, y: 22 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              viewport={{ once: true, margin: "-60px" }}
+              className="p-6 rounded-2xl border border-black/[0.08] dark:border-white/[0.1] bg-white/65 dark:bg-white/[0.055] backdrop-blur-xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <PastelTile from={g.from} to={g.to} className="w-9 h-9 rounded-[11px]">
+                  <g.Icon className="w-5 h-5 drop-shadow-[0_2px_2px_rgba(0,0,0,0.22)]" strokeWidth={2} />
+                </PastelTile>
+                <h3 className="text-sm font-semibold text-black/85 dark:text-white">{g.label}</h3>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {g.items.map((t) => (
+                  <Chip key={t}>{t}</Chip>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Connect ───────────────────────────────────────────── */
 
 function Connect() {
   return (
     <section id="connect" className="py-28 relative z-10">
-      <div className="max-w-[900px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -635,7 +737,7 @@ function Connect() {
 function Footer() {
   return (
     <footer className="relative z-10 border-t border-black/[0.06] dark:border-white/[0.05] py-8">
-      <div className="max-w-[900px] mx-auto px-6 flex items-center justify-between">
+      <div className="max-w-[1120px] mx-auto px-6 flex items-center justify-between">
         <span className="text-[12px] text-black/30 dark:text-neutral-600">© 2026 Damian Villarreal</span>
         <span className="text-[12px] text-black/30 dark:text-neutral-600">Security · Cloud · AI</span>
       </div>
@@ -675,6 +777,7 @@ export default function PortfolioLanding() {
       <Projects />
       <Presentations />
       <Research />
+      <Skills />
       <Connect />
       <Footer />
     </div>
