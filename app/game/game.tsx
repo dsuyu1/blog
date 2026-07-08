@@ -1,17 +1,18 @@
 "use client";
 
 /**
- * Pixel-town portfolio engine: a small hand-rolled canvas engine (no game
- * framework) with Pokémon-style grid movement, two maps, y-sorted sprites,
- * NPCs, warps, and DOM dialogue/HUD overlays.
+ * Pixel-world portfolio engine: a small hand-rolled canvas engine (no game
+ * framework) with Pokémon-style grid movement, multiple themed worlds picked
+ * from the home screen, y-sorted sprites, NPCs, warps, night lighting, and
+ * DOM dialogue/HUD overlays.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Press_Start_2P } from "next/font/google";
 import {
   TILE, SHEET_SRC, SPRITES, GRASS, DIRT, INTERIOR, CATEGORIES, DIALOGS,
-  MAPS, START, type SpriteDef, type MapDef, type Facing, type Dialog,
-  type NpcDef, type Warp, type SheetKey,
+  MAPS, WORLDS, MUSIC_SRC, type SpriteDef, type MapDef, type MapId,
+  type WorldId, type Facing, type Dialog, type NpcDef, type Warp,
 } from "./world";
 
 const pixelFont = Press_Start_2P({ weight: "400", subsets: ["latin"] });
@@ -39,15 +40,8 @@ interface WorldObject {
   dh: number;
   dialog?: string;
   label?: string;
+  light?: number; // night halo radius in world px
   marker?: { color: string; heart: boolean };
-}
-
-interface BuiltMap {
-  def: MapDef;
-  ground: HTMLCanvasElement;
-  solid: Uint8Array;
-  objects: WorldObject[];
-  interact: Map<string, string>; // "x,y" -> dialog id
 }
 
 interface Npc {
@@ -59,8 +53,17 @@ interface Npc {
   nextThink: number;
 }
 
+interface BuiltMap {
+  def: MapDef;
+  ground: HTMLCanvasElement;
+  solid: Uint8Array;
+  objects: WorldObject[];
+  interact: Map<string, string>; // "x,y" -> dialog id
+  npcs: Npc[];
+}
+
 interface Player {
-  map: "town" | "room";
+  map: MapId;
   x: number; y: number;
   fromX: number; fromY: number;
   facing: Facing;
@@ -153,6 +156,13 @@ function makeGenSheet(): HTMLCanvasElement {
   return c;
 }
 
+const THEME_BG: Record<MapDef["theme"], string> = {
+  interior: "#120b1d",
+  village: "#1c2b1a",
+  night: "#07071a",
+  scene: "#07070d",
+};
+
 function buildMap(
   def: MapDef,
   sheets: Record<string, CanvasImageSource>,
@@ -173,7 +183,7 @@ function buildMap(
   const isDirt = (x: number, y: number) =>
     x >= 0 && y >= 0 && x < w && y < h && dirt[y * w + x] === 1;
 
-  if (def.id === "room") {
+  if (def.theme === "interior") {
     // interior: dark void border, stone floor, wall along the top
     g.fillStyle = "#120b1d";
     g.fillRect(0, 0, w * TILE, h * TILE);
@@ -190,8 +200,13 @@ function buildMap(
     // doormat
     g.fillStyle = "#7a4a96"; g.fillRect(6 * TILE + 2, 10 * TILE + 2, TILE - 4, TILE - 4);
     g.fillStyle = "#9a63bd"; g.fillRect(6 * TILE + 4, 10 * TILE + 4, TILE - 8, TILE - 8);
+  } else if (def.theme === "scene") {
+    // full-scene map (cyberpunk street): the artwork IS the ground
+    g.fillStyle = THEME_BG.scene;
+    g.fillRect(0, 0, w * TILE, h * TILE);
+    g.drawImage(sheets.cyberBg as HTMLImageElement, 0, 0);
   } else {
-    // grass with seeded variety, then autotiled dirt paths
+    // village & night: grass with seeded variety, then autotiled dirt paths
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
         const r = rng();
@@ -227,7 +242,7 @@ function buildMap(
       const d = DIALOGS[o.dialog];
       if (d?.category) marker = { color: CATEGORIES[d.category].color, heart: !!d.cherished };
     }
-    objects.push({ def: s, px, py, dw, dh, dialog: o.dialog, label: o.label, marker });
+    objects.push({ def: s, px, py, dw, dh, dialog: o.dialog, label: o.label, light: o.light, marker });
     if (!o.deco) {
       for (let fy = 0; fy < foot[1]; fy++)
         for (let fx = 0; fx < foot[0]; fx++) {
@@ -239,7 +254,21 @@ function buildMap(
     }
   }
 
-  return { def, ground, solid, objects, interact };
+  // scene door-zones: interactable from the walk band below them
+  for (const z of def.zones ?? []) {
+    for (let t = z.tx; t < z.tx + z.w; t++) {
+      interact.set(`${t},${def.bounds.y0 - 1}`, z.dialog);
+      interact.set(`${t},${def.bounds.y0}`, z.dialog);
+    }
+  }
+
+  // NPCs block their tile via a dynamic runtime check, not the solid grid
+  const npcs: Npc[] = def.npcs.map((nd) => ({
+    def: nd, x: nd.x, y: nd.y, fromX: nd.x, fromY: nd.y,
+    facing: "down" as Facing, moveT: 1, nextThink: 1000 + Math.random() * 2000,
+  }));
+
+  return { def, ground, solid, objects, interact, npcs };
 }
 
 /* ── component ────────────────────────────────────────────── */
@@ -250,7 +279,8 @@ export default function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [ready, setReady] = useState(false);
-  const [intro, setIntro] = useState(true);
+  const [picker, setPicker] = useState(true); // world-select overlay (home screen)
+  const [started, setStarted] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [canInteract, setCanInteract] = useState(false);
   const [muted, setMuted] = useState(true);
@@ -258,10 +288,10 @@ export default function Game() {
 
   // refs shared with the game loop
   const state = useRef<{
-    maps: Record<"town" | "room", BuiltMap> | null;
+    maps: Record<MapId, BuiltMap> | null;
     sheets: Record<string, CanvasImageSource>;
     player: Player;
-    npcs: Npc[];
+    world: WorldId;
     held: Held;
     fade: { t: number; dir: 1 | -1 | 0; warp: Warp | null };
     paused: boolean;
@@ -269,8 +299,12 @@ export default function Game() {
   }>({
     maps: null,
     sheets: {},
-    player: { map: START.map, x: START.x, y: START.y, fromX: START.x, fromY: START.y, facing: START.facing, moveT: 1 },
-    npcs: [],
+    player: {
+      map: WORLDS[0].spawn.map, x: WORLDS[0].spawn.x, y: WORLDS[0].spawn.y,
+      fromX: WORLDS[0].spawn.x, fromY: WORLDS[0].spawn.y,
+      facing: WORLDS[0].spawn.facing, moveT: 1,
+    },
+    world: "village",
     held: {},
     fade: { t: 0, dir: 0, warp: null },
     paused: true,
@@ -297,15 +331,62 @@ export default function Game() {
     const key = `${p.x + dx},${p.y + dy}`;
     const map = s.maps[p.map];
     // NPCs first
-    const npc = s.npcs.find((n) => p.map === "town" && n.x === p.x + dx && n.y === p.y + dy);
+    const npc = map.npcs.find((n) => n.x === p.x + dx && n.y === p.y + dy);
     if (npc) {
-      npc.facing = p.facing === "up" ? "down" : p.facing === "down" ? "up" : p.facing === "left" ? "right" : "left";
+      if (npc.def.kind === "walker") {
+        npc.facing = p.facing === "up" ? "down" : p.facing === "down" ? "up" : p.facing === "left" ? "right" : "left";
+      }
       openDialog(npc.def.dialog);
       return;
     }
     const id = map.interact.get(key);
     if (id) openDialog(id);
   }, [openDialog]);
+
+  /* music */
+  const setTrack = useCallback((mapId: MapId, play: boolean) => {
+    const a = audioRef.current;
+    if (!a) return;
+    const src = MUSIC_SRC[MAPS[mapId].music];
+    const abs = new URL(src, window.location.href).href;
+    if (a.src !== abs) {
+      a.src = src;
+      a.volume = 0.3;
+    }
+    if (play) a.play().catch(() => {});
+  }, []);
+
+  /* enter a world (home-screen picker or WORLDS button) */
+  const enterWorld = useCallback((id: WorldId) => {
+    const s = state.current;
+    const world = WORLDS.find((w) => w.id === id)!;
+    s.world = id;
+    if (started) {
+      s.fade = { t: 0, dir: 1, warp: world.spawn };
+    } else {
+      const p = s.player;
+      p.map = world.spawn.map; p.x = world.spawn.x; p.y = world.spawn.y;
+      p.fromX = world.spawn.x; p.fromY = world.spawn.y;
+      p.facing = world.spawn.facing; p.moveT = 1;
+    }
+    setPicker(false);
+    setStarted(true);
+    s.paused = false;
+    const wantSound = localStorage.getItem("town-muted") === "0";
+    setTrack(world.spawn.map, wantSound);
+    if (wantSound) setMuted(false);
+  }, [started, setTrack]);
+
+  const openPicker = useCallback(() => {
+    state.current.paused = true;
+    setPicker(true);
+  }, []);
+
+  const closePicker = useCallback(() => {
+    if (!started) return;
+    state.current.paused = false;
+    setPicker(false);
+  }, [started]);
 
   /* input */
   useEffect(() => {
@@ -316,7 +397,11 @@ export default function Game() {
     };
     const down = (e: KeyboardEvent) => {
       if (e.repeat) return;
-      if (intro && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); start(); return; }
+      if (picker) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); enterWorld(state.current.world); }
+        if (e.key === "Escape") closePicker();
+        return;
+      }
       const dir = keyDir[e.key];
       if (dir) { e.preventDefault(); state.current.held[dir] = true; return; }
       if (e.key === "e" || e.key === "E" || e.key === "Enter" || e.key === " ") {
@@ -333,8 +418,7 @@ export default function Game() {
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dialog, intro, tryInteract, closeDialog]);
+  }, [dialog, picker, tryInteract, closeDialog, enterWorld, closePicker]);
 
   /* boot: load sheets, build maps, run the loop */
   useEffect(() => {
@@ -354,7 +438,10 @@ export default function Game() {
       const entries = await Promise.all(
         Object.entries(SHEET_SRC).map(async ([k, src]) => [k, await load(src)] as const),
       );
-      const chars = await Promise.all([load("/game/player.png"), load("/game/kid.png"), load("/game/pirate.png")]);
+      const chars = await Promise.all([
+        load("/game/player.png"), load("/game/kid.png"), load("/game/pirate.png"),
+        load("/game/soldier.png"), load("/game/orc.png"),
+      ]);
       if (cancelled) return;
       const s = state.current;
       s.sheets = Object.fromEntries(entries);
@@ -362,16 +449,16 @@ export default function Game() {
       s.sheets.player = chars[0];
       s.sheets.kid = chars[1];
       s.sheets.pirate = chars[2];
+      s.sheets.soldier = chars[3];
+      s.sheets.orc = chars[4];
 
       const rng = mulberry32(1337);
       s.maps = {
         town: buildMap(MAPS.town, s.sheets, rng),
         room: buildMap(MAPS.room, s.sheets, rng),
+        medieval: buildMap(MAPS.medieval, s.sheets, rng),
+        cyber: buildMap(MAPS.cyber, s.sheets, rng),
       };
-      s.npcs = MAPS.town.npcs.map((def) => ({
-        def, x: def.x, y: def.y, fromX: def.x, fromY: def.y,
-        facing: "down" as Facing, moveT: 1, nextThink: 1000 + Math.random() * 2000,
-      }));
       setReady(true);
 
       /* main loop */
@@ -385,8 +472,8 @@ export default function Game() {
         return map.solid[y * map.def.w + x] === 1;
       };
 
-      const npcAt = (x: number, y: number) =>
-        s.player.map === "town" && s.npcs.some((n) => (n.x === x && n.y === y) || (n.moveT < 1 && n.fromX === x && n.fromY === y));
+      const npcAt = (map: BuiltMap, x: number, y: number) =>
+        map.npcs.some((n) => (n.x === x && n.y === y) || (n.moveT < 1 && n.fromX === x && n.fromY === y));
 
       const startWarp = (warp: Warp) => {
         s.fade = { t: 0, dir: 1, warp };
@@ -429,37 +516,36 @@ export default function Game() {
             const warp = map.def.warps[`${nx},${ny}`];
             if (warp && isSolid(map, nx, ny)) {
               startWarp(warp); // bump-enter doors
-            } else if (!isSolid(map, nx, ny) && !npcAt(nx, ny)) {
+            } else if (!isSolid(map, nx, ny) && !npcAt(map, nx, ny)) {
               p.fromX = p.x; p.fromY = p.y; p.x = nx; p.y = ny; p.moveT = 0;
             }
           }
         }
 
-        /* NPC wandering */
-        if (p.map === "town") {
-          for (const n of s.npcs) {
-            if (n.moveT < 1) { n.moveT = Math.min(1, n.moveT + dt / (STEP_MS * 1.6)); continue; }
-            n.nextThink -= dt;
-            if (n.nextThink > 0 || s.paused) continue;
-            n.nextThink = 1200 + Math.random() * 2600;
-            const dirs = ["up", "down", "left", "right"] as Facing[];
-            const dir = dirs[(Math.random() * 4) | 0];
-            n.facing = dir;
-            const [dx, dy] = DIRS[dir];
-            const nx = n.x + dx, ny = n.y + dy;
-            const home = n.def;
-            if (Math.abs(nx - home.x) > home.wander || Math.abs(ny - home.y) > home.wander) continue;
-            if (isSolid(s.maps.town, nx, ny)) continue;
-            if ((nx === p.x && ny === p.y) || (nx === p.fromX && ny === p.fromY && p.moveT < 1)) continue;
-            n.fromX = n.x; n.fromY = n.y; n.x = nx; n.y = ny; n.moveT = 0;
-          }
+        /* NPC wandering (walkers only) */
+        for (const n of map.npcs) {
+          if (n.def.kind !== "walker") continue;
+          if (n.moveT < 1) { n.moveT = Math.min(1, n.moveT + dt / (STEP_MS * 1.6)); continue; }
+          n.nextThink -= dt;
+          if (n.nextThink > 0 || s.paused) continue;
+          n.nextThink = 1200 + Math.random() * 2600;
+          const dirs = ["up", "down", "left", "right"] as Facing[];
+          const dir = dirs[(Math.random() * 4) | 0];
+          n.facing = dir;
+          const [dx, dy] = DIRS[dir];
+          const nx = n.x + dx, ny = n.y + dy;
+          const home = n.def;
+          if (Math.abs(nx - home.x) > home.wander || Math.abs(ny - home.y) > home.wander) continue;
+          if (isSolid(map, nx, ny)) continue;
+          if ((nx === p.x && ny === p.y) || (nx === p.fromX && ny === p.fromY && p.moveT < 1)) continue;
+          n.fromX = n.x; n.fromY = n.y; n.x = nx; n.y = ny; n.moveT = 0;
         }
 
         /* interact hint */
         const [fdx, fdy] = DIRS[p.facing];
         const facingKey = `${p.x + fdx},${p.y + fdy}`;
         const target =
-          (p.map === "town" && s.npcs.some((n) => n.x === p.x + fdx && n.y === p.y + fdy) ? "npc" : null) ??
+          (map.npcs.some((n) => n.x === p.x + fdx && n.y === p.y + fdy) ? "npc" : null) ??
           map.interact.get(facingKey) ?? null;
         if (target !== s.interactTarget) {
           s.interactTarget = target;
@@ -488,7 +574,7 @@ export default function Game() {
 
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.imageSmoothingEnabled = false;
-        ctx.fillStyle = p.map === "room" ? "#120b1d" : "#1c2b1a";
+        ctx.fillStyle = THEME_BG[map.def.theme];
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.setTransform(S, 0, 0, S, -Math.round(camX * S), -Math.round(camY * S));
         ctx.drawImage(map.ground, 0, 0);
@@ -502,7 +588,9 @@ export default function Game() {
             y: o.py,
             draw: () => {
               const img = s.sheets[o.def.sheet] as HTMLImageElement;
-              ctx.drawImage(img, o.def.x, o.def.y, o.def.w, o.def.h, Math.round(o.px), Math.round(o.py - o.dh), o.dw, o.dh);
+              const frame = o.def.anim ? ((now / o.def.anim.ms) | 0) % o.def.anim.frames : 0;
+              const sx = o.def.x + frame * o.def.w;
+              ctx.drawImage(img, sx, o.def.y, o.def.w, o.def.h, Math.round(o.px), Math.round(o.py - o.dh), o.dw, o.dh);
             },
           });
         }
@@ -523,10 +611,29 @@ export default function Game() {
           ctx.restore();
         };
 
-        if (p.map === "town") {
-          for (const n of s.npcs) {
-            const nx = lerp(n.fromX, n.x, n.moveT) * TILE;
-            const ny = lerp(n.fromY, n.y, n.moveT) * TILE;
+        const drawStrip = (n: Npc, x: number, y: number) => {
+          const st = n.def.strip!;
+          const sheet = s.sheets[n.def.sheet];
+          const frame = ((now / 170) | 0) % st.frames;
+          const dx = Math.round(x + TILE / 2 - st.fw / 2);
+          const dy = Math.round(y + TILE - st.footY);
+          ctx.save();
+          if (st.flip) {
+            ctx.translate(dx + st.fw, dy);
+            ctx.scale(-1, 1);
+            ctx.drawImage(sheet, frame * st.fw, 0, st.fw, st.fh, 0, 0, st.fw, st.fh);
+          } else {
+            ctx.drawImage(sheet, frame * st.fw, 0, st.fw, st.fh, dx, dy, st.fw, st.fh);
+          }
+          ctx.restore();
+        };
+
+        for (const n of map.npcs) {
+          const nx = lerp(n.fromX, n.x, n.moveT) * TILE;
+          const ny = lerp(n.fromY, n.y, n.moveT) * TILE;
+          if (n.def.kind === "strip") {
+            items.push({ y: ny + TILE, draw: () => drawStrip(n, nx, ny) });
+          } else {
             items.push({ y: ny + TILE, draw: () => drawChar(s.sheets[n.def.sheet], nx, ny, n.facing, n.moveT < 1) });
           }
         }
@@ -535,34 +642,60 @@ export default function Game() {
         items.sort((a, b) => a.y - b.y);
         for (const it of items) it.draw();
 
+        /* night tint + warm light halos */
+        if (map.def.theme === "night") {
+          ctx.fillStyle = "rgba(13, 12, 48, 0.46)";
+          ctx.fillRect(0, 0, mw, mh);
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          const glow = (cx: number, cy: number, r: number, a: number) => {
+            const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
+            grad.addColorStop(0, `rgba(255, 176, 84, ${a})`);
+            grad.addColorStop(1, "rgba(255, 176, 84, 0)");
+            ctx.fillStyle = grad;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+          };
+          for (const o of map.objects) {
+            if (o.light) glow(o.px + o.dw / 2, o.py - o.dh / 2, o.light, 0.34);
+          }
+          glow(ppx + TILE / 2, ppy + TILE / 2, 30, 0.16); // player lantern
+          ctx.restore();
+        }
+
         /* markers, labels */
         const bob = Math.sin(now / 280) * 2;
+        const drawMarker = (mx: number, my: number, color: string, heart: boolean) => {
+          if (heart) {
+            const hd = SPRITES.heart;
+            ctx.drawImage(s.sheets.ob as HTMLImageElement, hd.x, hd.y, hd.w, hd.h, Math.round(mx - 7), Math.round(my - 14), 15, 15);
+          } else {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.round(mx - 1), Math.round(my - 12), 2, 2);
+            ctx.fillRect(Math.round(mx - 3), Math.round(my - 10), 6, 2);
+            ctx.fillRect(Math.round(mx - 5), Math.round(my - 8), 10, 2);
+            ctx.fillRect(Math.round(mx - 3), Math.round(my - 6), 6, 2);
+            ctx.fillRect(Math.round(mx - 1), Math.round(my - 4), 2, 2);
+          }
+        };
+        const drawLabel = (mx: number, baseY: number, label: string) => {
+          ctx.font = "5px 'Press Start 2P', monospace";
+          ctx.textAlign = "center";
+          const tw = ctx.measureText(label).width;
+          ctx.fillStyle = "rgba(10,8,18,0.72)";
+          ctx.fillRect(Math.round(mx - tw / 2 - 3), Math.round(baseY - 7), Math.round(tw + 6), 9);
+          ctx.fillStyle = "#ffe9a8";
+          ctx.fillText(label, Math.round(mx), Math.round(baseY));
+        };
         for (const o of map.objects) {
-          if (o.marker) {
-            const mx = o.px + o.dw / 2;
-            const my = o.py - o.dh - 7 + bob;
-            if (o.marker.heart) {
-              const hd = SPRITES.heart;
-              ctx.drawImage(s.sheets.ob as HTMLImageElement, hd.x, hd.y, hd.w, hd.h, Math.round(mx - 7), Math.round(my - 14), 15, 15);
-            } else {
-              ctx.fillStyle = o.marker.color;
-              ctx.fillRect(Math.round(mx - 1), Math.round(my - 12), 2, 2);
-              ctx.fillRect(Math.round(mx - 3), Math.round(my - 10), 6, 2);
-              ctx.fillRect(Math.round(mx - 5), Math.round(my - 8), 10, 2);
-              ctx.fillRect(Math.round(mx - 3), Math.round(my - 6), 6, 2);
-              ctx.fillRect(Math.round(mx - 1), Math.round(my - 4), 2, 2);
-            }
-          }
-          if (o.label) {
-            const mx = o.px + o.dw / 2;
-            ctx.font = "5px 'Press Start 2P', monospace";
-            ctx.textAlign = "center";
-            const tw = ctx.measureText(o.label).width;
-            ctx.fillStyle = "rgba(10,8,18,0.72)";
-            ctx.fillRect(Math.round(mx - tw / 2 - 3), Math.round(o.py - o.dh - 10), Math.round(tw + 6), 9);
-            ctx.fillStyle = "#ffe9a8";
-            ctx.fillText(o.label, Math.round(mx), Math.round(o.py - o.dh - 3));
-          }
+          if (o.marker) drawMarker(o.px + o.dw / 2, o.py - o.dh - 7 + bob, o.marker.color, o.marker.heart);
+          if (o.label) drawLabel(o.px + o.dw / 2, o.py - o.dh - 3, o.label);
+        }
+        for (const z of map.def.zones ?? []) {
+          const zx = (z.tx + z.w / 2) * TILE;
+          const d = DIALOGS[z.dialog];
+          const color = d?.category ? CATEGORIES[d.category].color : "#ffffff";
+          drawMarker(zx, z.markerY - 4 + bob, color, !!d?.cherished);
+          drawLabel(zx, z.markerY + 8, z.label);
         }
 
         /* interact bubble above the player */
@@ -602,44 +735,35 @@ export default function Game() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = useCallback(() => {
-    setIntro(false);
-    state.current.paused = false;
-    const stored = typeof window !== "undefined" ? localStorage.getItem("town-muted") : "1";
-    const wantSound = stored === "0";
-    if (wantSound && audioRef.current) {
-      audioRef.current.volume = 0.3;
-      audioRef.current.play().then(() => setMuted(false)).catch(() => {});
-    }
-  }, []);
-
   const toggleMusic = useCallback(() => {
     const a = audioRef.current;
     if (!a) return;
     if (muted) {
-      a.volume = 0.3;
-      a.play().then(() => { setMuted(false); localStorage.setItem("town-muted", "0"); }).catch(() => {});
+      setTrack(state.current.player.map, true);
+      setMuted(false);
+      localStorage.setItem("town-muted", "0");
     } else {
       a.pause();
       setMuted(true);
       localStorage.setItem("town-muted", "1");
     }
-  }, [muted]);
+  }, [muted, setTrack]);
 
   /* touch d-pad */
   const hold = (dir: Facing, on: boolean) => () => { state.current.held[dir] = on; };
   const padBtn =
     "flex items-center justify-center select-none rounded-md bg-white/10 active:bg-white/25 border border-white/20 text-white/80 w-12 h-12 text-lg";
+  const hudBtn = "px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/85";
 
   const cat = dialog?.category ? CATEGORIES[dialog.category] : null;
 
   return (
     <div className={`fixed inset-0 bg-[#0b0813] overflow-hidden ${pixelFont.className}`}>
       <canvas ref={canvasRef} className="w-full h-full [image-rendering:pixelated]" />
-      <audio ref={audioRef} src="/game/music.ogg" loop preload="none" />
+      <audio ref={audioRef} loop preload="none" />
 
       {/* HUD: legend */}
-      {!intro && (
+      {!picker && (
         <div className="absolute top-3 right-3 z-20 text-[8px] leading-relaxed">
           <button
             onClick={() => setLegendOpen((v) => !v)}
@@ -665,13 +789,16 @@ export default function Game() {
       )}
 
       {/* HUD: bottom-left controls */}
-      {!intro && (
+      {!picker && (
         <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 text-[8px]">
-          <button onClick={toggleMusic} className="px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/85">
+          <button onClick={openPicker} className={`${hudBtn} text-amber-200`}>
+            ◆ WORLDS
+          </button>
+          <button onClick={toggleMusic} className={hudBtn}>
             {muted ? "♪ OFF" : "♪ ON"}
           </button>
-          <a href="/portfolio" className="px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/60 hover:text-white/90">
-            CLASSIC SITE →
+          <a href="/portfolio" className={`${hudBtn} text-white/60 hover:text-white/90`}>
+            CLASSIC SITE
           </a>
           <span className="hidden sm:inline px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/45">
             WASD/←↑↓→ MOVE · E INTERACT
@@ -683,7 +810,7 @@ export default function Game() {
       )}
 
       {/* touch controls */}
-      {!intro && (
+      {!picker && (
         <div className="absolute inset-x-0 bottom-16 z-20 hidden [@media(pointer:coarse)]:flex justify-between px-5 pointer-events-none">
           <div className="grid grid-cols-3 gap-1 pointer-events-auto opacity-80">
             <div />
@@ -758,32 +885,61 @@ export default function Game() {
         </div>
       )}
 
-      {/* intro overlay */}
-      {intro && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0b0813]/92 p-6">
-          <div className="text-center max-w-xl">
+      {/* home screen: world picker */}
+      {picker && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0b0813]/94 p-6 overflow-y-auto">
+          <div className="text-center max-w-2xl w-full">
             <p className="text-[9px] text-emerald-300/80 mb-4 tracking-widest">DAMIAN VILLARREAL PRESENTS</p>
-            <h1 className="text-xl sm:text-3xl text-amber-200 mb-5 leading-relaxed drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]">
-              DAMIAN&apos;S TOWN
+            <h1 className="text-xl sm:text-3xl text-amber-200 mb-4 leading-relaxed drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]">
+              DAMIAN&apos;S WORLDS
             </h1>
             <p className="text-[8px] sm:text-[9px] text-white/70 leading-[2] mb-6">
-              A walkable portfolio. You wake up in the architect&apos;s studio —
-              step outside and explore a town of security, AI, and systems-design
-              projects. Talk to everything.
+              A walkable portfolio in three worlds. Each one is home to a
+              different side of my work — pick a world to explore it.
             </p>
-            <p className="text-[8px] text-white/45 leading-[2] mb-7">
+
+            <div className="grid gap-3 sm:grid-cols-3 mb-6">
+              {WORLDS.map((w) => (
+                <button
+                  key={w.id}
+                  onClick={() => enterWorld(w.id)}
+                  disabled={!ready}
+                  className="group px-4 py-5 rounded-lg border-2 bg-black/40 hover:bg-black/20 disabled:opacity-40 transition-colors text-center"
+                  style={{ borderColor: w.color }}
+                >
+                  <span className="block text-[10px] mb-2" style={{ color: w.color }}>
+                    {w.name}
+                  </span>
+                  <span className="block text-[7px] text-white/60 leading-[1.8]">
+                    {w.focus}
+                  </span>
+                  <span className="mt-3 inline-block text-[7px] px-2 py-1 rounded bg-white/10 text-white/70 group-hover:bg-white/20">
+                    {ready ? "ENTER" : "LOADING…"}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <p className="text-[8px] text-white/45 leading-[2] mb-5">
               WASD / ARROWS — MOVE&nbsp;&nbsp;·&nbsp;&nbsp;E — INTERACT&nbsp;&nbsp;·&nbsp;&nbsp;L — LEGEND
             </p>
-            <button
-              onClick={start}
-              disabled={!ready}
-              className="text-[10px] px-6 py-3 rounded bg-amber-300 text-black/90 hover:bg-amber-200 disabled:opacity-40 animate-pulse"
-            >
-              {ready ? "▶ PRESS START" : "LOADING…"}
-            </button>
-            <p className="mt-6 text-[7px] text-white/35">
-              <a href="/portfolio" className="underline hover:text-white/70">prefer a classic site? →</a>
-            </p>
+
+            <div className="flex items-center justify-center gap-3">
+              {started && (
+                <button
+                  onClick={closePicker}
+                  className="text-[8px] px-4 py-2 rounded border border-white/30 text-white/70 hover:text-white"
+                >
+                  BACK TO GAME
+                </button>
+              )}
+              <a
+                href="/portfolio"
+                className="text-[8px] px-4 py-2 rounded border border-white/30 text-white/70 hover:text-white inline-block"
+              >
+                CLASSIC SITE
+              </a>
+            </div>
           </div>
         </div>
       )}

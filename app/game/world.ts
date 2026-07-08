@@ -1,27 +1,50 @@
 /**
  * World data for the pixel-town portfolio: sprite atlas, map builders, and
- * all dialogue content. Sprite rects were measured off the TinyRPG sheets
- * (Legacy Collection, anokolisa) — see public/game/.
+ * all dialogue content. Sprite rects were measured off the source sheets —
+ * see public/game/ (TinyRPG "Legacy Collection" by anokolisa, Pixel Crawler
+ * free pack, ansimuz cyberpunk-street, Tiny RPG Soldier&Orc).
  *
- * Two maps: `room` (the studio you spawn in) and `town` (the overworld).
- * Categories are signalled three ways at once: building choice, signposts,
- * and floating colored markers (heart = most cherished), plus the HUD legend.
+ * Three explorable worlds, chosen from the home screen:
+ *   village  — Pixel Village (product · talks · blog · about), spawns in the
+ *              studio `room` which warps out to `town`.
+ *   medieval — Midnight Keep (architecture & system design), a night map.
+ *   cyber    — Neon City (hacking · AI · security ops), a side-view street
+ *              scene you walk along.
+ *
+ * Categories are signalled three ways at once: building choice, floating
+ * labels, and colored diamond markers (heart = most cherished), plus the
+ * HUD legend.
  */
 
 export const TILE = 16;
+
+export type MapId = "room" | "town" | "medieval" | "cyber";
+export type WorldId = "village" | "medieval" | "cyber";
 
 export type SheetKey =
   | "ow" // overworld tileset (grass/dirt/buildings)
   | "tw" // top-down town tileset (big house, trees, ground)
   | "dg" // dungeon tileset (interior walls/floor)
   | "ob" // dungeon objects (furniture/props)
-  | "gen"; // runtime-generated pixel art (signposts)
+  | "pcTrees" // Pixel Crawler pines
+  | "pcAnvil" // Pixel Crawler smithy stations
+  | "pcProps" // Pixel Crawler dungeon props (torches, banners, graves)
+  | "pcRocks" // Pixel Crawler boulders
+  | "bonfire" // Pixel Crawler animated bonfire (4 frames of 32x32)
+  | "cyberBg" // ansimuz cyberpunk street scene (608x192)
+  | "gen"; // runtime-generated pixel art (signpost, desk, bed, computer…)
 
 export const SHEET_SRC: Record<Exclude<SheetKey, "gen">, string> = {
   ow: "/game/overworld.png",
   tw: "/game/town.png",
   dg: "/game/dungeon.png",
   ob: "/game/objects.png",
+  pcTrees: "/game/pc-trees.png",
+  pcAnvil: "/game/pc-anvil.png",
+  pcProps: "/game/pc-props.png",
+  pcRocks: "/game/pc-rocks.png",
+  bonfire: "/game/bonfire.png",
+  cyberBg: "/game/cyber-street.png",
 };
 
 export type CategoryKey =
@@ -51,6 +74,7 @@ export interface SpriteDef {
   h: number;
   scale?: number; // draw scale (overworld buildings are map-icons, drawn 2x)
   foot?: [w: number, h: number]; // solid footprint in tiles (bottom rows)
+  anim?: { frames: number; ms: number }; // horizontal strip animation
 }
 
 export const SPRITES = {
@@ -75,6 +99,16 @@ export const SPRITES = {
   bush2: { sheet: "tw", x: 145, y: 96, w: 14, h: 16, scale: 1, foot: [1, 1] },
   rock_s: { sheet: "tw", x: 33, y: 148, w: 14, h: 8, scale: 1, foot: [1, 1] },
   rock_b: { sheet: "tw", x: 37, y: 156, w: 19, h: 36, scale: 1, foot: [1, 1] },
+  // Pixel Crawler night-world props (1x)
+  pine1: { sheet: "pcTrees", x: 4, y: 9, w: 48, h: 103, scale: 1, foot: [2, 1] },
+  pine2: { sheet: "pcTrees", x: 54, y: 9, w: 52, h: 103, scale: 1, foot: [2, 1] },
+  pine_dead: { sheet: "pcTrees", x: 120, y: 17, w: 64, h: 95, scale: 1, foot: [2, 1] },
+  smithy: { sheet: "pcAnvil", x: 80, y: 36, w: 79, h: 56, scale: 1, foot: [5, 2] },
+  torch: { sheet: "pcProps", x: 67, y: 40, w: 10, h: 15, scale: 1, foot: [1, 1] },
+  grave: { sheet: "pcProps", x: 97, y: 4, w: 17, h: 18, scale: 1, foot: [1, 1] },
+  boulder: { sheet: "pcRocks", x: 1, y: 0, w: 59, h: 60, scale: 1, foot: [4, 2] },
+  boulder2: { sheet: "pcRocks", x: 65, y: 17, w: 59, h: 43, scale: 1, foot: [4, 2] },
+  bonfire: { sheet: "bonfire", x: 0, y: 0, w: 32, h: 32, scale: 1, foot: [2, 1], anim: { frames: 4, ms: 140 } },
   // interior props
   chest: { sheet: "ob", x: 161, y: 19, w: 15, h: 13, scale: 1, foot: [1, 1] },
   cabinet: { sheet: "ob", x: 176, y: 80, w: 16, h: 16, scale: 1, foot: [1, 1] },
@@ -143,47 +177,57 @@ export const DIALOGS: Record<string, Dialog> = {
       "ThreatScaper is an AI-powered threat-intelligence enrichment tool for security and business operations: automated IOC enrichment and machine-speed triage.",
     ],
     tags: ["AI", "Threat Intel", "Security Ops", "2026"],
-    links: [{ label: "Visit ThreatScaper ↗", href: "https://security.damianvillarreal.com" }],
+    links: [{ label: "Visit ThreatScaper", href: "https://security.damianvillarreal.com" }],
   },
   zerotrust: {
-    title: "Zero-Trust Fortress",
+    title: "The Keep",
     category: "security",
     body: [
-      "A fortress trusts nobody who walks up to the gate. Neither does this framework.",
-      "Blockchain-backed IoT security architecture with post-quantum crypto and ML anomaly detection, sustaining ~397 TPS.",
+      "A keep trusts nobody who walks up to the gate. Neither does this framework — its walls are the architecture itself.",
+      "Zero-Trust IoT Security Framework: blockchain-backed architecture with post-quantum crypto and ML anomaly detection, sustaining ~397 TPS.",
     ],
     tags: ["Blockchain", "PQ Crypto", "ML", "IoT", "2025"],
-    links: [{ label: "Source on GitHub ↗", href: `${GH}/seniorproject2025` }],
+    links: [{ label: "Source on GitHub", href: `${GH}/seniorproject2025` }],
   },
   aws: {
-    title: "The Watchtower",
+    title: "Watchpoint",
     category: "security",
     body: [
-      "From up here you can see the whole cloud.",
+      "Every skyline needs a watcher. This one watches the cloud.",
       "AWS Cloud Security Monitoring: Terraform-provisioned Wazuh agents on EC2, with Tailscale for secure home-manager connectivity.",
     ],
     tags: ["AWS", "Terraform", "Wazuh", "Tailscale", "2025"],
-    links: [{ label: "Source on GitHub ↗", href: `${GH}/wazuh-tf` }],
+    links: [{ label: "Source on GitHub", href: `${GH}/wazuh-tf` }],
   },
   soar: {
-    title: "Automation Hall",
+    title: "SOC Bar",
     category: "security",
     body: [
-      "Inside, the machines triage alerts so humans don't have to.",
+      "The regulars here are machines, and they never stop triaging.",
       "SOAR-EDR pipeline built on Tines + LimaCharlie for LLM-augmented, machine-speed triage and enrichment across the detection lifecycle.",
     ],
     tags: ["Tines", "LimaCharlie", "SOAR", "LLM", "2025"],
-    links: [{ label: "Source on GitHub ↗", href: `${GH}/SOAR-EDR-Project` }],
+    links: [{ label: "Source on GitHub", href: `${GH}/SOAR-EDR-Project` }],
   },
   chipnemo: {
-    title: "The Observatory",
+    title: "AI Lab",
     category: "ai",
     body: [
-      "Where the town studies language models.",
+      "Behind the neon: GPUs, tokenizers, and a lot of curated data.",
       "ChipNeMo DAPT Pipeline: reproduced NVIDIA's domain-adaptive pre-training pipeline for Llama 2 7B — data curation, custom tokenization, DAPT, and SFT with NeMo.",
     ],
     tags: ["NeMo", "Llama 2", "DAPT", "Python", "2026"],
     links: [{ label: "Read the write-up", href: "/n/4" }],
+  },
+  c2club: {
+    title: "C2 Club",
+    category: "security",
+    body: [
+      "Members only. The bouncer asks for your beacon, not your ID.",
+      "Empire C2 — a red-team talk I gave at the 6th Annual BSides RGV (May 2025) on command-and-control infrastructure.",
+    ],
+    tags: ["Red Team", "C2", "BSides RGV", "2025"],
+    links: [{ label: "All talks & details", href: "/portfolio#talks" }],
   },
   talks: {
     title: "Speaker's Chapel",
@@ -213,7 +257,7 @@ export const DIALOGS: Record<string, Dialog> = {
     ],
     links: [
       { label: "About me", href: "/about" },
-      { label: "GitHub ↗", href: GH },
+      { label: "GitHub", href: GH },
     ],
   },
   blog: {
@@ -244,8 +288,8 @@ export const DIALOGS: Record<string, Dialog> = {
       "This is the machine — ThreatScaper, security tooling, and training pipelines all get built here. Terminal-heavy, coffee-fueled, usually running well past midnight.",
     ],
     links: [
-      { label: "ThreatScaper ↗", href: "https://security.damianvillarreal.com" },
-      { label: "GitHub ↗", href: GH },
+      { label: "ThreatScaper", href: "https://security.damianvillarreal.com" },
+      { label: "GitHub", href: GH },
     ],
   },
   bed: {
@@ -269,32 +313,79 @@ export const DIALOGS: Record<string, Dialog> = {
     cherished: true,
     body: ["The work I'm proudest of. Handle with care."],
     links: [
-      { label: "ThreatScaper ↗", href: "https://security.damianvillarreal.com" },
-      { label: "Zero-Trust IoT Framework ↗", href: `${GH}/seniorproject2025` },
+      { label: "ThreatScaper", href: "https://security.damianvillarreal.com" },
+      { label: "Zero-Trust IoT Framework", href: `${GH}/seniorproject2025` },
     ],
+  },
+  // medieval night world
+  guild: {
+    title: "Drafting Guild",
+    category: "architecture",
+    body: [
+      "The guild hall where systems are designed by candlelight.",
+      "Security architectures, cloud topologies, AI pipelines — the craft here is deciding how the pieces fit together before a single stone is laid.",
+    ],
+    links: [
+      { label: "Full portfolio", href: "/portfolio" },
+      { label: "Learning roadmap", href: "/learning" },
+    ],
+  },
+  forge: {
+    title: "The Forge",
+    category: "architecture",
+    body: [
+      "Blueprints go in, systems come out.",
+      "Terraform plans, NeMo training runs, SOAR pipelines — every design from the guild gets hammered into something real on this anvil.",
+    ],
+    links: [{ label: "See what's been forged", href: "/portfolio#projects" }],
+  },
+  archives: {
+    title: "The Archives",
+    category: "architecture",
+    body: [
+      "Scrolls of tokenization pipelines, memory maps, and process trees — the diagram collection of a systems architect, preserved in write-ups.",
+    ],
+    links: [{ label: "Browse the write-ups", href: "/n" }],
+  },
+  bonfire: {
+    title: "Bonfire",
+    category: "guide",
+    body: [
+      "The fire crackles. Travelers swap war stories here — federated learning at the edge, C2 infrastructure, zero-trust at midnight.",
+    ],
+    links: [{ label: "Hear the talks", href: "/portfolio#talks" }],
+  },
+  npc_soldier: {
+    title: "Keep Guard",
+    category: "guide",
+    body: [
+      "Halt! The Keep runs zero-trust — nobody gets in on reputation alone. Not even me, and I've stood this post for years.",
+      "Every request is verified, every device attested. The architect designed it that way on purpose.",
+    ],
+    links: [{ label: "The Keep's blueprints", href: `${GH}/seniorproject2025` }],
+  },
+  npc_orc: {
+    title: "Orc by the Fire",
+    category: "guide",
+    body: [
+      "Orc used to smash castle walls. Then orc read about post-quantum crypto. Walls got harder.",
+      "Orc reviews pull requests now. Orc rejects force-push to main.",
+    ],
+    links: [{ label: "Orc's favorite repos", href: GH }],
   },
   sign_welcome: {
     title: "Town Notice Board",
     category: "guide",
     body: [
-      "Welcome to Damian's Town — a walkable portfolio.",
-      "Every building with a floating gem holds a project; the gem's color is its category (see the legend). Pink hearts mark the work I cherish most. Walk up and press E to enter.",
+      "Welcome to Damian's world — a walkable portfolio.",
+      "Anything with a floating gem holds a project; the gem's color is its category (see the legend). Pink hearts mark the work I cherish most. Walk up and press E.",
+      "Other worlds await — press the WORLDS button to travel.",
     ],
   },
   sign_home: {
     title: "Signpost",
     category: "guide",
     body: ["« Damian's Studio — the architect lives (and drafts) here. »"],
-  },
-  sign_security: {
-    title: "Signpost",
-    category: "security",
-    body: ["« Security Quarter — fortress, watchtower & automation hall. »"],
-  },
-  sign_ai: {
-    title: "Signpost",
-    category: "ai",
-    body: ["« Research District — observatory, shrine & chapel. »"],
   },
   sign_flagship: {
     title: "Signpost",
@@ -310,7 +401,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "guide",
     body: [
       "Hey, you're new! Move with WASD or the arrow keys, press E to talk to things.",
-      "The colored gems floating over buildings tell you what's inside — red is security, purple is AI, gold is the product castle. The heart? That's the stuff Damian loves most.",
+      "The colored gems floating over buildings tell you what's inside — gold is the product castle, green means info. And there are other worlds! A dark keep, a neon city… press WORLDS to travel.",
     ],
   },
   npc_pirate: {
@@ -320,7 +411,7 @@ export const DIALOGS: Record<string, Dialog> = {
       "Looking for the architect himself? He ships everything to the open seas of GitHub. Or send a raven — er, an email.",
     ],
     links: [
-      { label: "GitHub ↗", href: GH },
+      { label: "GitHub", href: GH },
       { label: "About & contact", href: "/about" },
     ],
   },
@@ -335,12 +426,13 @@ export interface ObjPlace {
   tx: number; // tile of the leftmost footprint column
   ty: number; // tile of the bottom footprint row (baseline)
   dialog?: string;
-  label?: string; // small floating label (signposts)
+  label?: string; // small floating label
   deco?: boolean; // no collision (wall decorations)
+  light?: number; // night-world light halo radius in world px
 }
 
 export interface Warp {
-  map: "town" | "room";
+  map: MapId;
   x: number;
   y: number;
   facing: Facing;
@@ -348,21 +440,36 @@ export interface Warp {
 
 export interface NpcDef {
   id: string;
-  sheet: "kid" | "pirate";
+  // walker: 4-frame x 3-row 32px sheet; strip: single idle animation strip
+  kind: "walker" | "strip";
+  sheet: string; // char sheet key (kid, pirate, soldier, orc)
   x: number;
   y: number;
   dialog: string;
-  wander: number; // radius in tiles, 0 = stationary
+  wander: number; // radius in tiles, 0 = stationary (strips never wander)
+  strip?: { frames: number; fw: number; fh: number; footY: number; flip?: boolean };
+}
+
+/** Door-zone on a scene map: interactable strip with a floating marker. */
+export interface Zone {
+  tx: number; // leftmost tile of the zone
+  w: number; // width in tiles
+  dialog: string;
+  label: string;
+  markerY: number; // world-px y for the marker/label (above the door)
 }
 
 export interface MapDef {
-  id: "town" | "room";
+  id: MapId;
   w: number;
   h: number;
+  theme: "interior" | "village" | "night" | "scene";
+  music: "cliffs" | "cyber";
   // walkable bounds (everything outside is solid)
   bounds: { x0: number; y0: number; x1: number; y1: number };
   dirt: [x: number, y: number, w: number, h: number][];
   objects: ObjPlace[];
+  zones?: Zone[];
   warps: Record<string, Warp>; // "x,y" — triggered by stepping on or bumping into
   npcs: NpcDef[];
 }
@@ -371,6 +478,8 @@ export const TOWN: MapDef = {
   id: "town",
   w: 42,
   h: 36,
+  theme: "village",
+  music: "cliffs",
   bounds: { x0: 2, y0: 4, x1: 38, y1: 32 },
   dirt: [
     [5, 15, 33, 2], // north street
@@ -381,28 +490,26 @@ export const TOWN: MapDef = {
   objects: [
     // home (north street, center) — door warps into the room
     { sprite: "bighouse", tx: 19, ty: 14, dialog: "sign_home" },
-    // security quarter (west)
-    { sprite: "fortress", tx: 6, ty: 14, dialog: "zerotrust" },
-    { sprite: "tower", tx: 12, ty: 14, dialog: "aws" },
-    { sprite: "hall", tx: 6, ty: 24, dialog: "soar" },
     // flagship castle (south street)
     { sprite: "castle", tx: 14, ty: 24, dialog: "threatscaper" },
-    // research district (east)
-    { sprite: "dome", tx: 28, ty: 14, dialog: "chipnemo" },
-    { sprite: "temple", tx: 33, ty: 14, dialog: "about" },
+    // east side
     { sprite: "arena", tx: 28, ty: 24, dialog: "learning" },
     { sprite: "church", tx: 33, ty: 24, dialog: "talks" },
+    { sprite: "temple", tx: 33, ty: 14, dialog: "about" },
     // plaza
     { sprite: "well", tx: 18, ty: 20, dialog: "blog" },
     // signposts
     { sprite: "sign", tx: 24, ty: 14, dialog: "sign_welcome", label: "WELCOME" },
     { sprite: "sign", tx: 17, ty: 14, dialog: "sign_home", label: "STUDIO" },
-    { sprite: "sign", tx: 10, ty: 18, dialog: "sign_security", label: "SECURITY" },
-    { sprite: "sign", tx: 31, ty: 18, dialog: "sign_ai", label: "RESEARCH" },
     { sprite: "sign", tx: 12, ty: 22, dialog: "sign_flagship", label: "FLAGSHIP" },
     // neighbor cottages
     { sprite: "house_a", tx: 25, ty: 14, dialog: "neighbor" },
     { sprite: "house_b", tx: 11, ty: 24, dialog: "neighbor" },
+    { sprite: "house_a", tx: 7, ty: 14, dialog: "neighbor" },
+    { sprite: "house_b", tx: 28, ty: 14, dialog: "neighbor" },
+    // greenery — west side (where the old security quarter stood)
+    { sprite: "tree", tx: 6, ty: 21 }, { sprite: "tree", tx: 11, ty: 13 },
+    { sprite: "stump", tx: 7, ty: 27 }, { sprite: "bush1", tx: 10, ty: 19 },
     // greenery — north park
     { sprite: "tree", tx: 5, ty: 9 }, { sprite: "tree", tx: 15, ty: 8 },
     { sprite: "tree", tx: 36, ty: 9 }, { sprite: "bush1", tx: 11, ty: 9 },
@@ -411,7 +518,7 @@ export const TOWN: MapDef = {
     // mid-town greenery
     { sprite: "bush1", tx: 5, ty: 20 }, { sprite: "smalltree", tx: 37, ty: 21 },
     { sprite: "bush2", tx: 5, ty: 21 }, { sprite: "rock_s", tx: 37, ty: 19 },
-    { sprite: "bush2", tx: 26, ty: 21 },
+    { sprite: "bush2", tx: 26, ty: 21 }, { sprite: "smalltree", tx: 30, ty: 17 },
     // south green
     { sprite: "tree", tx: 5, ty: 31 }, { sprite: "tree", tx: 20, ty: 31 },
     { sprite: "tree", tx: 36, ty: 31 }, { sprite: "stump", tx: 24, ty: 29 },
@@ -423,8 +530,8 @@ export const TOWN: MapDef = {
     "21,14": { map: "room", x: 6, y: 9, facing: "up" },
   },
   npcs: [
-    { id: "kid", sheet: "kid", x: 24, y: 20, dialog: "npc_kid", wander: 2 },
-    { id: "pirate", sheet: "pirate", x: 31, y: 27, dialog: "npc_pirate", wander: 2 },
+    { id: "kid", kind: "walker", sheet: "kid", x: 24, y: 20, dialog: "npc_kid", wander: 2 },
+    { id: "pirate", kind: "walker", sheet: "pirate", x: 31, y: 27, dialog: "npc_pirate", wander: 2 },
   ],
 };
 
@@ -432,6 +539,8 @@ export const ROOM: MapDef = {
   id: "room",
   w: 13,
   h: 12,
+  theme: "interior",
+  music: "cliffs",
   bounds: { x0: 1, y0: 2, x1: 11, y1: 10 },
   dirt: [],
   objects: [
@@ -459,6 +568,124 @@ export const ROOM: MapDef = {
   npcs: [],
 };
 
-export const MAPS = { town: TOWN, room: ROOM };
+export const MEDIEVAL: MapDef = {
+  id: "medieval",
+  w: 28,
+  h: 24,
+  theme: "night",
+  music: "cliffs",
+  bounds: { x0: 2, y0: 4, x1: 25, y1: 20 },
+  dirt: [
+    [4, 12, 20, 2], // main road
+    [11, 6, 2, 6], // path up to the keep
+    [10, 14, 6, 4], // bonfire clearing
+  ],
+  objects: [
+    // the keep (zero-trust architecture)
+    { sprite: "fortress", tx: 10, ty: 9, dialog: "zerotrust", label: "THE KEEP", light: 44 },
+    { sprite: "torch", tx: 9, ty: 10, light: 30 },
+    { sprite: "torch", tx: 14, ty: 10, light: 30 },
+    // drafting guild (west)
+    { sprite: "bighouse", tx: 3, ty: 11, dialog: "guild", label: "DRAFTING GUILD" },
+    // the forge (east)
+    { sprite: "smithy", tx: 17, ty: 11, dialog: "forge", label: "THE FORGE", light: 36 },
+    // the archives (south-east)
+    { sprite: "temple", tx: 20, ty: 18, dialog: "archives", label: "ARCHIVES" },
+    { sprite: "torch", tx: 19, ty: 18, light: 30 },
+    // bonfire clearing (south-center)
+    { sprite: "bonfire", tx: 12, ty: 15, dialog: "bonfire", light: 52 },
+    // graveyard corner
+    { sprite: "grave", tx: 22, ty: 6 }, { sprite: "grave", tx: 24, ty: 7 },
+    { sprite: "grave", tx: 23, ty: 8 }, { sprite: "pine_dead", tx: 24, ty: 5 },
+    // boulders
+    { sprite: "boulder", tx: 4, ty: 7 }, { sprite: "boulder2", tx: 16, ty: 19 },
+    // pine forest border & scatter
+    { sprite: "pine1", tx: 2, ty: 4 }, { sprite: "pine2", tx: 5, ty: 5 },
+    { sprite: "pine1", tx: 8, ty: 4 }, { sprite: "pine2", tx: 15, ty: 5 },
+    { sprite: "pine1", tx: 18, ty: 4 }, { sprite: "pine2", tx: 20, ty: 5 },
+    { sprite: "pine1", tx: 2, ty: 10 }, { sprite: "pine2", tx: 2, ty: 16 },
+    { sprite: "pine1", tx: 4, ty: 20 }, { sprite: "pine2", tx: 8, ty: 19 },
+    { sprite: "pine1", tx: 12, ty: 20 }, { sprite: "pine2", tx: 25, ty: 12 },
+    { sprite: "pine1", tx: 25, ty: 16 }, { sprite: "pine_dead", tx: 6, ty: 9 },
+    { sprite: "pine2", tx: 24, ty: 20 },
+  ],
+  warps: {},
+  npcs: [
+    {
+      id: "soldier", kind: "strip", sheet: "soldier", x: 12, y: 11,
+      dialog: "npc_soldier", wander: 0,
+      strip: { frames: 6, fw: 100, fh: 100, footY: 70 },
+    },
+    {
+      id: "orc", kind: "strip", sheet: "orc", x: 14, y: 16,
+      dialog: "npc_orc", wander: 0,
+      strip: { frames: 6, fw: 100, fh: 100, footY: 70, flip: true },
+    },
+  ],
+};
 
-export const START = { map: "room" as const, x: 6, y: 6, facing: "down" as Facing };
+export const CYBER: MapDef = {
+  id: "cyber",
+  w: 38, // 608px scene / 16
+  h: 12, // 192px
+  theme: "scene",
+  music: "cyber",
+  bounds: { x0: 1, y0: 10, x1: 36, y1: 11 },
+  dirt: [],
+  objects: [],
+  zones: [
+    { tx: 1, w: 3, dialog: "soar", label: "SOC BAR", markerY: 118 },
+    { tx: 8, w: 3, dialog: "aws", label: "WATCHPOINT", markerY: 108 },
+    { tx: 15, w: 3, dialog: "chipnemo", label: "AI LAB", markerY: 112 },
+    { tx: 19, w: 2, dialog: "c2club", label: "C2 CLUB", markerY: 118 },
+    { tx: 32, w: 3, dialog: "threatscaper", label: "THREATSCAPER", markerY: 112 },
+  ],
+  warps: {},
+  npcs: [],
+};
+
+export const MAPS: Record<MapId, MapDef> = {
+  town: TOWN,
+  room: ROOM,
+  medieval: MEDIEVAL,
+  cyber: CYBER,
+};
+
+/* ── world registry (home-screen picker) ──────────────────── */
+
+export interface World {
+  id: WorldId;
+  name: string;
+  focus: string; // what this world showcases, shown on the picker button
+  color: string;
+  spawn: { map: MapId; x: number; y: number; facing: Facing };
+}
+
+export const WORLDS: World[] = [
+  {
+    id: "village",
+    name: "PIXEL VILLAGE",
+    focus: "Product · Talks · Blog · About",
+    color: "#a3e635",
+    spawn: { map: "room", x: 6, y: 6, facing: "down" },
+  },
+  {
+    id: "medieval",
+    name: "MIDNIGHT KEEP",
+    focus: "Architecture & System Design",
+    color: "#67e8f9",
+    spawn: { map: "medieval", x: 12, y: 13, facing: "up" },
+  },
+  {
+    id: "cyber",
+    name: "NEON CITY",
+    focus: "Hacking · AI · Security Ops",
+    color: "#f472b6",
+    spawn: { map: "cyber", x: 3, y: 11, facing: "right" },
+  },
+];
+
+export const MUSIC_SRC: Record<MapDef["music"], string> = {
+  cliffs: "/game/music.ogg",
+  cyber: "/game/cyber-music.ogg",
+};

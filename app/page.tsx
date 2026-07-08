@@ -3,7 +3,7 @@ import Game from './game/game';
 
 export const metadata: Metadata = {
   description:
-    "Damian Villarreal — security operations, cloud, and AI. A walkable 2D pixel town: spawn in the architect's studio, then explore buildings holding security, AI, and product projects.",
+    "Damian Villarreal — security operations, cloud, and AI. A walkable 2D pixel portfolio in three worlds: a village of products and talks, a midnight keep of architecture, and a neon city of hacking and AI.",
 };
 
 export default function Home() {
