@@ -80,17 +80,76 @@ const DIRS: Record<Facing, [number, number]> = {
   up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0],
 };
 
-/** Runtime-drawn wooden signpost (16x16). */
-function makeSignSheet(): HTMLCanvasElement {
+/**
+ * Runtime-drawn pixel props that don't exist in the RPG sheets (a computer
+ * has no place in a medieval tileset). One 64x64 atlas; coordinates match the
+ * `gen`-sheet SpriteDefs in world.ts:
+ *   sign (0,0)  computer (16,0)  window (32,0)  desk (0,16, 32x16)  bed (0,32, 32x32)
+ */
+function makeGenSheet(): HTMLCanvasElement {
   const c = document.createElement("canvas");
-  c.width = 16; c.height = 16;
+  c.width = 64; c.height = 64;
   const g = c.getContext("2d")!;
-  g.fillStyle = "#5c3a21"; g.fillRect(7, 8, 2, 7); // post
-  g.fillStyle = "#8a5a32"; g.fillRect(1, 2, 14, 7); // board
-  g.fillStyle = "#a97c50"; g.fillRect(2, 3, 12, 5); // board face
-  g.fillStyle = "#6b4526"; // etched lines
-  g.fillRect(4, 4, 8, 1); g.fillRect(4, 6, 6, 1);
-  g.fillStyle = "#3e2715"; g.fillRect(7, 15, 2, 1);
+  const px = (color: string, x: number, y: number, w = 1, h = 1) => {
+    g.fillStyle = color; g.fillRect(x, y, w, h);
+  };
+
+  // ── signpost (0,0) ──
+  px("#5c3a21", 7, 8, 2, 7); // post
+  px("#8a5a32", 1, 2, 14, 7); // board
+  px("#a97c50", 2, 3, 12, 5); // board face
+  px("#6b4526", 4, 4, 8, 1); px("#6b4526", 4, 6, 6, 1); // etched lines
+  px("#3e2715", 7, 15, 2, 1);
+
+  // ── computer / CRT monitor (16,0), facing the viewer ──
+  const cx = 16;
+  px("#58616b", cx + 7, 9, 2, 1); // neck
+  px("#9aa2ac", cx + 5, 13, 6, 1); // stand base
+  px("#6b7480", cx + 3, 1, 10, 8); // monitor body
+  px("#98a1ac", cx + 3, 1, 10, 1); // top highlight
+  px("#4c545e", cx + 3, 8, 10, 1); // bottom shadow
+  px("#10232b", cx + 4, 2, 8, 5); // screen border
+  px("#1f7d8a", cx + 5, 3, 6, 3); // screen glow
+  px("#8fe6f0", cx + 5, 3, 6, 1); // scanline
+  px("#bdf3fa", cx + 5, 5, 2, 1); px("#5fc7d4", cx + 8, 5, 3, 1); // code lines
+  px("#9aa2ac", cx + 2, 11, 12, 3); // keyboard
+  px("#6b7480", cx + 2, 13, 12, 1); // keyboard front
+  px("#c3ccd4", cx + 3, 11, 10, 1); // key highlight
+
+  // ── window (32,0), wall-mounted, sky behind glass ──
+  const wx = 32;
+  px("#6b4526", wx + 1, 1, 14, 15); // wood frame
+  px("#bfe4f5", wx + 2, 2, 5, 5); px("#bfe4f5", wx + 9, 2, 5, 5); // upper panes
+  px("#a9d8ee", wx + 2, 9, 5, 5); px("#a9d8ee", wx + 9, 9, 5, 5); // lower panes
+  px("#e3f5ff", wx + 2, 2, 5, 2); px("#e3f5ff", wx + 9, 2, 5, 2); // sky highlight
+  px("#dff0d8", wx + 3, 6, 2, 1); // hint of hills
+  px("#6b4526", wx + 7, 1, 2, 15); px("#6b4526", wx + 1, 7, 14, 2); // mullion cross
+  px("#8a5a32", wx + 7, 1, 2, 1); px("#7a4e2c", wx + 1, 15, 14, 1); // sill
+
+  // ── wooden desk (0,16), top-down, 2 tiles wide ──
+  const dy = 16;
+  px("#3e2715", 1, dy + 13, 2, 2); px("#3e2715", 29, dy + 13, 2, 2); // front legs
+  px("#5c3a21", 1, dy + 1, 30, 13); // edge
+  px("#8a5a32", 2, dy + 2, 28, 11); // top
+  px("#a4703f", 2, dy + 2, 28, 2); // back highlight
+  px("#6b4526", 2, dy + 11, 28, 2); // front shadow
+  px("#7a4e2c", 4, dy + 5, 22, 1); px("#7a4e2c", 5, dy + 8, 18, 1); // grain
+  px("#6b4526", 19, dy + 5, 10, 7); // drawer
+  px("#c9a05a", 23, dy + 8, 2, 1); // drawer handle
+
+  // ── bed (0,32), top-down, 2x2 tiles ──
+  const by = 32;
+  px("#4a2e19", 0, by + 1, 32, 30); // frame
+  px("#6b4526", 1, by + 2, 30, 28); // frame inner
+  px("#e8e8ef", 2, by + 3, 28, 8); // pillow
+  px("#ffffff", 2, by + 3, 28, 3); // pillow highlight
+  px("#c9c9d6", 2, by + 10, 28, 1); // pillow shadow
+  px("#d0d0dd", 15, by + 4, 1, 6); // pillow crease
+  px("#3f7fb0", 2, by + 12, 28, 18); // blanket
+  px("#5a9fd0", 2, by + 12, 28, 2); // blanket highlight
+  px("#2f6690", 2, by + 20, 28, 1); // fold line
+  px("#2f6690", 2, by + 28, 28, 2); // foot shadow
+
   return c;
 }
 
@@ -123,7 +182,9 @@ function buildMap(
         g.drawImage(sheets.dg as HTMLImageElement, INTERIOR.floor.x, INTERIOR.floor.y, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
     for (let x = 1; x <= w - 2; x++) {
       g.drawImage(sheets.dg as HTMLImageElement, INTERIOR.wallTop.x, INTERIOR.wallTop.y, TILE, TILE, x * TILE, 0, TILE, TILE);
-      const v = x === 3 || x === 9 ? INTERIOR.wallTorch : x === 6 ? INTERIOR.wallWindow : INTERIOR.wall;
+      // Windows are hand-drawn deco objects placed on the wall; keep torches
+      // clear of them (tx 4/6/8).
+      const v = x === 2 || x === 10 ? INTERIOR.wallTorch : INTERIOR.wall;
       g.drawImage(sheets.dg as HTMLImageElement, v.x, v.y, TILE, TILE, x * TILE, TILE, TILE, TILE);
     }
     // doormat
@@ -297,7 +358,7 @@ export default function Game() {
       if (cancelled) return;
       const s = state.current;
       s.sheets = Object.fromEntries(entries);
-      s.sheets.gen = makeSignSheet();
+      s.sheets.gen = makeGenSheet();
       s.sheets.player = chars[0];
       s.sheets.kid = chars[1];
       s.sheets.pirate = chars[2];

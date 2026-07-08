@@ -76,7 +76,6 @@ export const SPRITES = {
   rock_s: { sheet: "tw", x: 33, y: 148, w: 14, h: 8, scale: 1, foot: [1, 1] },
   rock_b: { sheet: "tw", x: 37, y: 156, w: 19, h: 36, scale: 1, foot: [1, 1] },
   // interior props
-  desk: { sheet: "ob", x: 64, y: 115, w: 50, h: 13, scale: 1, foot: [4, 1] },
   chest: { sheet: "ob", x: 161, y: 19, w: 15, h: 13, scale: 1, foot: [1, 1] },
   cabinet: { sheet: "ob", x: 176, y: 80, w: 16, h: 16, scale: 1, foot: [1, 1] },
   vase: { sheet: "ob", x: 113, y: 82, w: 14, h: 13, scale: 1, foot: [1, 1] },
@@ -84,7 +83,12 @@ export const SPRITES = {
   banner: { sheet: "ob", x: 80, y: 80, w: 16, h: 16, scale: 1 },
   coins: { sheet: "ob", x: 113, y: 112, w: 14, h: 16, scale: 1, foot: [1, 1] },
   heart: { sheet: "ob", x: 241, y: 50, w: 15, h: 15, scale: 1 },
+  // hand-drawn props (see makeGenSheet in game.tsx)
   sign: { sheet: "gen", x: 0, y: 0, w: 16, h: 16, scale: 1, foot: [1, 1] },
+  computer: { sheet: "gen", x: 16, y: 0, w: 16, h: 16, scale: 1, foot: [1, 1] },
+  window: { sheet: "gen", x: 32, y: 0, w: 16, h: 16, scale: 1 },
+  desk: { sheet: "gen", x: 0, y: 16, w: 32, h: 16, scale: 1, foot: [2, 1] },
+  bed: { sheet: "gen", x: 0, y: 32, w: 32, h: 32, scale: 1, foot: [2, 2] },
 } satisfies Record<string, SpriteDef>;
 
 export type SpriteKey = keyof typeof SPRITES;
@@ -221,7 +225,7 @@ export const DIALOGS: Record<string, Dialog> = {
     links: [{ label: "Read the blog", href: "/n" }],
   },
   desk: {
-    title: "The Drafting Desk",
+    title: "The Wooden Desk",
     category: "architecture",
     body: [
       "Where systems get designed before they get built.",
@@ -230,6 +234,25 @@ export const DIALOGS: Record<string, Dialog> = {
     links: [
       { label: "Full portfolio", href: "/portfolio" },
       { label: "Learning roadmap", href: "/learning" },
+    ],
+  },
+  computer: {
+    title: "The Workstation",
+    category: "product",
+    body: [
+      "Where the sketches turn into software.",
+      "This is the machine — ThreatScaper, security tooling, and training pipelines all get built here. Terminal-heavy, coffee-fueled, usually running well past midnight.",
+    ],
+    links: [
+      { label: "ThreatScaper ↗", href: "https://security.damianvillarreal.com" },
+      { label: "GitHub ↗", href: GH },
+    ],
+  },
+  bed: {
+    title: "The Bed",
+    body: [
+      "Even architects have to sleep sometime.",
+      "…though this one mostly lies awake designing zero-trust boundaries in his head.",
     ],
   },
   cabinet: {
@@ -412,14 +435,21 @@ export const ROOM: MapDef = {
   bounds: { x0: 1, y0: 2, x1: 11, y1: 10 },
   dirt: [],
   objects: [
-    { sprite: "desk", tx: 2, ty: 4, dialog: "desk" },
-    { sprite: "chest", tx: 6, ty: 2, dialog: "chest" },
+    // windows along the top wall
+    { sprite: "window", tx: 4, ty: 1, deco: true },
+    { sprite: "window", tx: 6, ty: 1, deco: true },
+    { sprite: "window", tx: 8, ty: 1, deco: true },
+    // workstation & storage against the top wall
+    { sprite: "computer", tx: 2, ty: 3, dialog: "computer" },
+    { sprite: "chest", tx: 5, ty: 2, dialog: "chest" },
     { sprite: "cabinet", tx: 9, ty: 2, dialog: "cabinet" },
-    { sprite: "banner", tx: 4, ty: 1, deco: true },
-    { sprite: "banner", tx: 8, ty: 1, deco: true },
-    { sprite: "vase", tx: 10, ty: 6 },
-    { sprite: "plant", tx: 1, ty: 7 },
-    { sprite: "coins", tx: 10, ty: 9 },
+    // wooden drafting desk (left) and bed (right)
+    { sprite: "desk", tx: 2, ty: 6, dialog: "desk" },
+    { sprite: "bed", tx: 8, ty: 6, dialog: "bed" },
+    // decor
+    { sprite: "vase", tx: 11, ty: 5 },
+    { sprite: "plant", tx: 1, ty: 9 },
+    { sprite: "coins", tx: 4, ty: 9 },
   ],
   warps: {
     // doormat at the bottom — step on it to leave the studio
