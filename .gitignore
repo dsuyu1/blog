@@ -38,3 +38,6 @@ next-env.d.ts
 
 # claude stuff
 .claude*
+# raw sprite/asset packs (only the curated copies in public/game ship)
+/Legacy Collection/
+/Magic-Cliffs-Gamekit/

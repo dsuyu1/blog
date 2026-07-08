@@ -1,12 +1,25 @@
 import type { Metadata } from 'next';
-import Desktop from './desktop/desktop';
-import { posts } from './posts';
+import Game from './game/game';
 
 export const metadata: Metadata = {
   description:
-    'Damian Villarreal — security operations, cloud, and AI. A macOS-style desktop: open the Posts folder for the blog, or launch the About, Portfolio, and Learning apps.',
+    "Damian Villarreal — security operations, cloud, and AI. A walkable 2D pixel town: spawn in the architect's studio, then explore buildings holding security, AI, and product projects.",
 };
 
 export default function Home() {
-  return <Desktop posts={posts} />;
+  return (
+    <>
+      <Game />
+      <noscript>
+        <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
+          <h1>Damian Villarreal</h1>
+          <p>
+            This page is an explorable 2D pixel-town portfolio and needs
+            JavaScript. For the classic version, visit{' '}
+            <a href="/portfolio">/portfolio</a>.
+          </p>
+        </div>
+      </noscript>
+    </>
+  );
 }
