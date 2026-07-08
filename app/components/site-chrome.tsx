@@ -8,7 +8,7 @@ function Nav() {
   return (
     <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
       <a href="/" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-        desktop
+        town
       </a>
       <a href="/portfolio" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
         portfolio
