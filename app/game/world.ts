@@ -1,15 +1,15 @@
 /**
  * World data for the pixel-town portfolio: sprite atlas, map builders, and
- * all dialogue content. Sprite rects were measured off the source sheets —
+ * all dialogue content. Sprite rects were measured off the source sheets:
  * see public/game/ (TinyRPG "Legacy Collection" by anokolisa, Pixel Crawler
  * free pack, ansimuz cyberpunk-street, Tiny RPG Soldier&Orc).
  *
  * Three explorable worlds, chosen from the home screen:
- *   village  — Pixel Village (product · talks · blog · about), spawns in the
- *              studio `room` which warps out to `town`.
- *   medieval — Midnight Keep (architecture & system design), a night map.
- *   cyber    — Neon City (hacking · AI · security ops), a side-view street
- *              scene you walk along.
+ *   village: Pixel Village (product, talks, blog, about), spawns in the
+ *            studio `room` which warps out to `town`.
+ *   medieval: Midnight Keep (architecture & system design), a night map.
+ *   cyber: Neon City (hacking, AI, security ops), a side-view street scene
+ *          you walk along.
  *
  * Categories are signalled three ways at once: building choice, floating
  * labels, and colored diamond markers (heart = most cherished), plus the
@@ -89,27 +89,34 @@ export interface SpriteDef {
 }
 
 export const SPRITES = {
-  // overworld buildings (2x)
+  // overworld buildings (2x). Rects verified by flood-fill connected-
+  // component analysis of the source sheet: the original hand-picked boxes
+  // for tower/castle/church/house_a/house_b either bled into a neighboring
+  // sprite or were clipped short (see pixel-town-redesign memory).
   fortress: { sheet: "ow", x: 34, y: 228, w: 28, h: 25, scale: 2, foot: [4, 2] },
-  tower: { sheet: "ow", x: 138, y: 241, w: 22, h: 47, scale: 2, foot: [3, 2] },
+  tower: { sheet: "ow", x: 144, y: 241, w: 16, h: 47, scale: 2, foot: [3, 2] },
   hall: { sheet: "ow", x: 65, y: 226, w: 27, h: 29, scale: 2, foot: [4, 2] },
-  castle: { sheet: "ow", x: 45, y: 291, w: 33, h: 26, scale: 2, foot: [5, 2] },
+  castle: { sheet: "ow", x: 51, y: 292, w: 27, h: 25, scale: 2, foot: [5, 2] },
   dome: { sheet: "ow", x: 4, y: 260, w: 23, h: 27, scale: 2, foot: [3, 2] },
   temple: { sheet: "ow", x: 37, y: 259, w: 21, h: 27, scale: 2, foot: [3, 2] },
   arena: { sheet: "ow", x: 0, y: 226, w: 32, h: 29, scale: 2, foot: [4, 2] },
-  church: { sheet: "ow", x: 97, y: 293, w: 26, h: 39, scale: 2, foot: [4, 2] },
+  church: { sheet: "ow", x: 97, y: 293, w: 26, h: 42, scale: 2, foot: [4, 2] },
   well: { sheet: "ow", x: 101, y: 230, w: 22, h: 23, scale: 2, foot: [3, 2] },
-  house_a: { sheet: "ow", x: 0, y: 285, w: 16, h: 18, scale: 2, foot: [2, 1] },
-  house_b: { sheet: "ow", x: 16, y: 285, w: 17, h: 19, scale: 2, foot: [2, 1] },
-  // town-scale props (1x)
-  bighouse: { sheet: "tw", x: 192, y: 25, w: 80, h: 125, scale: 1, foot: [5, 3] },
+  // neighbor cottages: bumped from 2x to 4x (their native art is a tiny
+  // overworld-map icon, ~15px) so they read as real houses next to the
+  // player's much larger `bighouse`, without matching it exactly.
+  house_a: { sheet: "ow", x: 0, y: 288, w: 15, h: 15, scale: 4, foot: [4, 2] },
+  house_b: { sheet: "ow", x: 16, y: 288, w: 14, h: 16, scale: 4, foot: [4, 2] },
+  house_c: { sheet: "ow", x: 32, y: 288, w: 16, h: 16, scale: 4, foot: [4, 2] },
+  // town-scale props (1x). bighouse/rock_s/rock_b corrected the same way.
+  bighouse: { sheet: "tw", x: 192, y: 25, w: 80, h: 127, scale: 1, foot: [5, 3] },
   tree: { sheet: "tw", x: 118, y: 16, w: 54, h: 63, scale: 1, foot: [2, 1] },
   smalltree: { sheet: "tw", x: 33, y: 96, w: 15, h: 31, scale: 1, foot: [1, 1] },
   stump: { sheet: "tw", x: 64, y: 99, w: 32, h: 29, scale: 1, foot: [2, 1] },
   bush1: { sheet: "tw", x: 113, y: 96, w: 14, h: 16, scale: 1, foot: [1, 1] },
   bush2: { sheet: "tw", x: 145, y: 96, w: 14, h: 16, scale: 1, foot: [1, 1] },
-  rock_s: { sheet: "tw", x: 33, y: 148, w: 14, h: 8, scale: 1, foot: [1, 1] },
-  rock_b: { sheet: "tw", x: 37, y: 156, w: 19, h: 36, scale: 1, foot: [1, 1] },
+  rock_s: { sheet: "tw", x: 33, y: 148, w: 14, h: 9, scale: 1, foot: [1, 1] },
+  rock_b: { sheet: "tw", x: 37, y: 167, w: 25, h: 25, scale: 1, foot: [2, 1] },
   // Pixel Crawler night-world props (1x)
   pine1: { sheet: "pcTrees", x: 4, y: 9, w: 54, h: 103, scale: 1, foot: [2, 1] },
   pine2: { sheet: "pcTrees", x: 68, y: 9, w: 54, h: 103, scale: 1, foot: [2, 1] },
@@ -164,7 +171,7 @@ export const DIRT = {
 
 // Pixel Crawler night-world ground (pcFloors sheet): solid dark-grass fills
 // picked from the blob arms, and brick tiles from the road patch
-// (verified 100%-opaque cells — the first blob row has scalloped edges and
+// (verified 100%-opaque cells: the first blob row has scalloped edges and
 // the brick patch is not 16-aligned at its top-left corner)
 export const PC_GRASS = [
   { x: 16, y: 160 }, { x: 32, y: 160 }, { x: 16, y: 176 }, { x: 48, y: 160 },
@@ -202,7 +209,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "product",
     cherished: true,
     body: [
-      "The castle at the heart of town — my flagship product.",
+      "The castle at the heart of town, my flagship product.",
       "ThreatScaper is an AI-powered threat-intelligence enrichment tool for security and business operations: automated IOC enrichment and machine-speed triage.",
     ],
     tags: ["AI", "Threat Intel", "Security Ops", "2026"],
@@ -212,7 +219,7 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "The Keep",
     category: "security",
     body: [
-      "A keep trusts nobody who walks up to the gate. Neither does this framework — its walls are the architecture itself.",
+      "A keep trusts nobody who walks up to the gate. Neither does this framework: its walls are the architecture itself.",
       "Zero-Trust IoT Security Framework: blockchain-backed architecture with post-quantum crypto and ML anomaly detection, sustaining ~397 TPS.",
     ],
     tags: ["Blockchain", "PQ Crypto", "ML", "IoT", "2025"],
@@ -243,7 +250,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "ai",
     body: [
       "Behind the neon: GPUs, tokenizers, and a lot of curated data.",
-      "ChipNeMo DAPT Pipeline: reproduced NVIDIA's domain-adaptive pre-training pipeline for Llama 2 7B — data curation, custom tokenization, DAPT, and SFT with NeMo.",
+      "ChipNeMo DAPT Pipeline: reproduced NVIDIA's domain-adaptive pre-training pipeline for Llama 2 7B, covering data curation, custom tokenization, DAPT, and SFT with NeMo.",
     ],
     tags: ["NeMo", "Llama 2", "DAPT", "Python", "2026"],
     links: [{ label: "Read the write-up", href: "/n/4" }],
@@ -253,7 +260,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "security",
     body: [
       "Members only. The bouncer asks for your beacon, not your ID.",
-      "Empire C2 — a red-team talk I gave at the 6th Annual BSides RGV (May 2025) on command-and-control infrastructure.",
+      "Empire C2: a red-team talk I gave at the 6th Annual BSides RGV (May 2025) on command-and-control infrastructure.",
     ],
     tags: ["Red Team", "C2", "BSides RGV", "2025"],
     links: [{ label: "All talks & details", href: "/portfolio#talks" }],
@@ -274,7 +281,7 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "Training Grounds",
     category: "guide",
     body: [
-      "Every architect keeps training. The arena tracks what I'm studying right now — certs, papers, and lab work.",
+      "Every architect keeps training. The arena tracks what I'm studying right now: certs, papers, and lab work.",
     ],
     links: [{ label: "See the learning roadmap", href: "/learning" }],
   },
@@ -282,7 +289,7 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "Shrine of the Architect",
     category: "guide",
     body: [
-      "Damian Villarreal — security operations, cloud, and AI. Aspiring security architect: I care about how systems fit together, not just how they break.",
+      "Damian Villarreal, security operations, cloud, and AI. Aspiring security architect: I care about how systems fit together, not just how they break.",
     ],
     links: [
       { label: "About me", href: "/about" },
@@ -293,7 +300,7 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "Well of Knowledge",
     category: "guide",
     body: [
-      "Drop a bucket in and pull up a write-up. Reverse engineering, LLM training pipelines, security experiments — it all ends up in the well.",
+      "Drop a bucket in and pull up a write-up. Reverse engineering, LLM training pipelines, security experiments: it all ends up in the well.",
     ],
     links: [{ label: "Read the blog", href: "/n" }],
   },
@@ -302,7 +309,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "architecture",
     body: [
       "Where systems get designed before they get built.",
-      "Security architectures, cloud infrastructure, AI training pipelines — my favorite work is deciding how the pieces fit together. Everything out in town started as a sketch on this desk.",
+      "Security architectures, cloud infrastructure, AI training pipelines: my favorite work is deciding how the pieces fit together. Everything out in town started as a sketch on this desk.",
     ],
     links: [
       { label: "Full portfolio", href: "/portfolio" },
@@ -314,7 +321,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "product",
     body: [
       "Where the sketches turn into software.",
-      "This is the machine — ThreatScaper, security tooling, and training pipelines all get built here. Terminal-heavy, coffee-fueled, usually running well past midnight.",
+      "This is the machine: ThreatScaper, security tooling, and training pipelines all get built here. Terminal-heavy, coffee-fueled, usually running well past midnight.",
     ],
     links: [
       { label: "ThreatScaper", href: "https://security.damianvillarreal.com" },
@@ -352,7 +359,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "architecture",
     body: [
       "The guild hall where systems are designed by candlelight.",
-      "Security architectures, cloud topologies, AI pipelines — the craft here is deciding how the pieces fit together before a single stone is laid.",
+      "Security architectures, cloud topologies, AI pipelines: the craft here is deciding how the pieces fit together before a single stone is laid.",
     ],
     links: [
       { label: "Full portfolio", href: "/portfolio" },
@@ -364,7 +371,7 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "architecture",
     body: [
       "Blueprints go in, systems come out.",
-      "Terraform plans, NeMo training runs, SOAR pipelines — every design from the guild gets hammered into something real on this anvil.",
+      "Terraform plans, NeMo training runs, SOAR pipelines: every design from the guild gets hammered into something real on this anvil.",
     ],
     links: [{ label: "See what's been forged", href: "/portfolio#projects" }],
   },
@@ -372,7 +379,7 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "The Archives",
     category: "architecture",
     body: [
-      "Scrolls of tokenization pipelines, memory maps, and process trees — the diagram collection of a systems architect, preserved in write-ups.",
+      "Scrolls of tokenization pipelines, memory maps, and process trees: the diagram collection of a systems architect, preserved in write-ups.",
     ],
     links: [{ label: "Browse the write-ups", href: "/n" }],
   },
@@ -380,7 +387,7 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "Bonfire",
     category: "guide",
     body: [
-      "The fire crackles. Travelers swap war stories here — federated learning at the edge, C2 infrastructure, zero-trust at midnight.",
+      "The fire crackles. Travelers swap war stories here: federated learning at the edge, C2 infrastructure, zero-trust at midnight.",
     ],
     links: [{ label: "Hear the talks", href: "/portfolio#talks" }],
   },
@@ -388,7 +395,7 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "Keep Guard",
     category: "guide",
     body: [
-      "Halt! The Keep runs zero-trust — nobody gets in on reputation alone. Not even me, and I've stood this post for years.",
+      "Halt! The Keep runs zero-trust: nobody gets in on reputation alone. Not even me, and I've stood this post for years.",
       "Every request is verified, every device attested. The architect designed it that way on purpose.",
     ],
     links: [{ label: "The Keep's blueprints", href: `${GH}/seniorproject2025` }],
@@ -406,38 +413,38 @@ export const DIALOGS: Record<string, Dialog> = {
     title: "Town Notice Board",
     category: "guide",
     body: [
-      "Welcome to Damian's world — a walkable portfolio.",
+      "Welcome to Damian's world, a walkable portfolio.",
       "Anything with a floating gem holds a project; the gem's color is its category (see the legend). Pink hearts mark the work I cherish most. Walk up and press E.",
-      "Other worlds await — press the WORLDS button to travel.",
+      "Other worlds await: press the WORLDS button to travel.",
     ],
   },
   sign_home: {
     title: "Signpost",
     category: "guide",
-    body: ["« Damian's Studio — the architect lives (and drafts) here. »"],
+    body: ["« Damian's Studio: the architect lives (and drafts) here. »"],
   },
   sign_flagship: {
     title: "Signpost",
     category: "product",
-    body: ["« The Castle — home of ThreatScaper, the town's flagship product. »"],
+    body: ["« The Castle: home of ThreatScaper, the town's flagship product. »"],
   },
   neighbor: {
     title: "Neighbor's House",
-    body: ["You knock. Nobody answers — they're probably reading the blog."],
+    body: ["You knock. Nobody answers, they're probably reading the blog."],
   },
   npc_kid: {
     title: "Kid",
     category: "guide",
     body: [
       "Hey, you're new! Move with WASD or the arrow keys, press E to talk to things.",
-      "The colored gems floating over buildings tell you what's inside — gold is the product castle, green means info. And there are other worlds! A dark keep, a neon city… press WORLDS to travel.",
+      "The colored gems floating over buildings tell you what's inside: gold is the product castle, green means info. And there are other worlds! A dark keep, a neon city... press WORLDS to travel.",
     ],
   },
   npc_pirate: {
     title: "Pirate Girl",
     category: "guide",
     body: [
-      "Looking for the architect himself? He ships everything to the open seas of GitHub. Or send a raven — er, an email.",
+      "Looking for the architect himself? He ships everything to the open seas of GitHub. Or send a raven, er, an email.",
     ],
     links: [
       { label: "GitHub", href: GH },
@@ -502,7 +509,7 @@ export interface MapDef {
   dirt: [x: number, y: number, w: number, h: number][];
   objects: ObjPlace[];
   zones?: Zone[];
-  warps: Record<string, Warp>; // "x,y" — triggered by stepping on or bumping into
+  warps: Record<string, Warp>; // "x,y": triggered by stepping on or bumping into
   npcs: NpcDef[];
 }
 
@@ -520,7 +527,7 @@ export const TOWN: MapDef = {
     [17, 18, 6, 4], // plaza
   ],
   objects: [
-    // home (north street, center) — door warps into the room
+    // home (north street, center): door warps into the room
     { sprite: "bighouse", tx: 19, ty: 14, dialog: "sign_home" },
     // flagship castle (south street)
     { sprite: "castle", tx: 14, ty: 24, dialog: "threatscaper" },
@@ -534,15 +541,16 @@ export const TOWN: MapDef = {
     { sprite: "sign", tx: 24, ty: 14, dialog: "sign_welcome", label: "WELCOME" },
     { sprite: "sign", tx: 17, ty: 14, dialog: "sign_home", label: "STUDIO" },
     { sprite: "sign", tx: 12, ty: 22, dialog: "sign_flagship", label: "FLAGSHIP" },
-    // neighbor cottages
-    { sprite: "house_a", tx: 25, ty: 14, dialog: "neighbor" },
-    { sprite: "house_b", tx: 11, ty: 24, dialog: "neighbor" },
-    { sprite: "house_a", tx: 7, ty: 14, dialog: "neighbor" },
-    { sprite: "house_b", tx: 28, ty: 14, dialog: "neighbor" },
-    // greenery — west side (where the old security quarter stood)
+    // neighbor cottages: spaced out for their larger (4-tile) footprint,
+    // clear of the signs/temple/castle/arena rows they share
+    { sprite: "house_a", tx: 8, ty: 14, dialog: "neighbor" },
+    { sprite: "house_c", tx: 26, ty: 14, dialog: "neighbor" },
+    { sprite: "house_b", tx: 6, ty: 24, dialog: "neighbor" },
+    { sprite: "house_a", tx: 21, ty: 24, dialog: "neighbor" },
+    // west-side greenery (where the old security quarter stood)
     { sprite: "tree", tx: 6, ty: 21 }, { sprite: "tree", tx: 11, ty: 13 },
     { sprite: "stump", tx: 7, ty: 27 }, { sprite: "bush1", tx: 10, ty: 19 },
-    // greenery — north park
+    // north-park greenery
     { sprite: "tree", tx: 5, ty: 9 }, { sprite: "tree", tx: 15, ty: 8 },
     { sprite: "tree", tx: 36, ty: 9 }, { sprite: "bush1", tx: 11, ty: 9 },
     { sprite: "bush2", tx: 24, ty: 10 }, { sprite: "rock_b", tx: 32, ty: 8 },
@@ -593,7 +601,7 @@ export const ROOM: MapDef = {
     { sprite: "coins", tx: 4, ty: 9 },
   ],
   warps: {
-    // doormat at the bottom — step on it to leave the studio
+    // doormat at the bottom: step on it to leave the studio
     "6,11": { map: "town", x: 21, y: 15, facing: "down" },
     "6,10": { map: "town", x: 21, y: 15, facing: "down" },
   },
@@ -617,7 +625,7 @@ export const MEDIEVAL: MapDef = {
     [10, 16, 6, 3], // bonfire clearing
   ],
   objects: [
-    // north row: guild hall, keep gatehouse, archives — all composed from
+    // north row (guild hall, keep gatehouse, archives), all composed from
     // the Pixel Crawler walls/roofs/props + castle pieces
     { sprite: "guildhouse", tx: 2, ty: 10, dialog: "guild", label: "DRAFTING GUILD" },
     { sprite: "keep", tx: 11, ty: 10, dialog: "zerotrust", label: "THE KEEP", light: 44 },

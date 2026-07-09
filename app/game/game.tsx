@@ -160,7 +160,7 @@ function makeGenSheet(): HTMLCanvasElement {
  * Compose the Midnight Keep buildings from the Pixel Crawler modular kit
  * (wall strips + roof assemblies + door/window props + castle pieces).
  *
- * The "_big" roof assets have an UNEVEN bottom silhouette — their two gable
+ * The "_big" roof assets have an UNEVEN bottom silhouette: their two gable
  * slopes dip to a shallowest point partway down (verified by profiling the
  * source alpha channel: brown_big/teal_big both bottom out at source y=70,
  * i.e. local y=64 after the sheet's own trim offset) rather than forming a
@@ -168,7 +168,7 @@ function makeGenSheet(): HTMLCanvasElement {
  * the roof's overall bottom therefore leaves gaps under the shallow parts
  * of the eaves, showing bare ground through the "attic". Fix: draw the wall
  * texture doubled (tiled top-to-bottom) starting well above that shallowest
- * point, THEN draw the roof on top — the roof hides the excess wall
+ * point, THEN draw the roof on top. The roof hides the excess wall
  * wherever it has full coverage, and the tiled wall fills in everywhere it
  * doesn't, so no gap is possible regardless of the roof's exact silhouette.
  *
@@ -207,7 +207,7 @@ function makeMedSheet(sheets: Record<string, CanvasImageSource>): HTMLCanvasElem
   d(P, 101, 60, 22, 36, 144 + 82, 91);
 
   // the keep: castle curtain wall (crenellations + banner trims) at 2x with
-  // the arched wooden gate inlaid at center — self-contained stone piece,
+  // the arched wooden gate inlaid at center. Self-contained stone piece,
   // no gable roof involved, so it isn't affected by the roofline issue above
   d(D, 0, 230, 72, 48, 280, 0, 2);
   d(D, 0, 112, 32, 34, 280 + 40, 28, 2);
@@ -1000,7 +1000,7 @@ export default function Game() {
             </h1>
             <p className="text-[11px] sm:text-[12px] text-white/70 leading-[2] mb-7">
               A walkable portfolio in three worlds. Each one is home to a
-              different side of my work — pick a world to explore it.
+              different side of my work: pick a world to explore it.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-3 mb-7">
@@ -1026,7 +1026,7 @@ export default function Game() {
             </div>
 
             <p className="text-[10px] text-white/45 leading-[2] mb-6">
-              WASD / ARROWS — MOVE&nbsp;&nbsp;·&nbsp;&nbsp;E — INTERACT&nbsp;&nbsp;·&nbsp;&nbsp;L — LEGEND&nbsp;&nbsp;·&nbsp;&nbsp;ESC — WORLDS
+              WASD / ARROWS: MOVE&nbsp;&nbsp;·&nbsp;&nbsp;E: INTERACT&nbsp;&nbsp;·&nbsp;&nbsp;L: LEGEND&nbsp;&nbsp;·&nbsp;&nbsp;ESC: WORLDS
             </p>
 
             <div className="flex items-center justify-center gap-3">
