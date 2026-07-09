@@ -89,27 +89,20 @@ export interface SpriteDef {
 }
 
 export const SPRITES = {
-  // overworld buildings (2x). Rects verified by flood-fill connected-
-  // component analysis of the source sheet: the original hand-picked boxes
-  // for tower/castle/church/house_a/house_b either bled into a neighboring
-  // sprite or were clipped short (see pixel-town-redesign memory).
-  fortress: { sheet: "ow", x: 34, y: 228, w: 28, h: 25, scale: 2, foot: [4, 2] },
-  tower: { sheet: "ow", x: 144, y: 241, w: 16, h: 47, scale: 2, foot: [3, 2] },
-  hall: { sheet: "ow", x: 65, y: 226, w: 27, h: 29, scale: 2, foot: [4, 2] },
-  castle: { sheet: "ow", x: 51, y: 292, w: 27, h: 25, scale: 2, foot: [5, 2] },
-  dome: { sheet: "ow", x: 4, y: 260, w: 23, h: 27, scale: 2, foot: [3, 2] },
-  temple: { sheet: "ow", x: 37, y: 259, w: 21, h: 27, scale: 2, foot: [3, 2] },
-  arena: { sheet: "ow", x: 0, y: 226, w: 32, h: 29, scale: 2, foot: [4, 2] },
-  church: { sheet: "ow", x: 97, y: 293, w: 26, h: 42, scale: 2, foot: [4, 2] },
+  // overworld buildings (3x). Rects verified by flood-fill connected-
+  // component analysis of the source sheet; drawn at 3x so they read as real
+  // structures rather than tiny world-map icons, comparable to the player's
+  // `bighouse`. (well stays 2x as a modest plaza centerpiece.) Placements in
+  // TOWN are overlap-checked against the roads with a layout script.
+  fortress: { sheet: "ow", x: 34, y: 228, w: 28, h: 25, scale: 3, foot: [4, 2] },
+  tower: { sheet: "ow", x: 144, y: 241, w: 16, h: 47, scale: 3, foot: [3, 2] },
+  hall: { sheet: "ow", x: 65, y: 226, w: 27, h: 29, scale: 3, foot: [4, 2] },
+  castle: { sheet: "ow", x: 51, y: 292, w: 27, h: 25, scale: 3, foot: [5, 2] },
+  dome: { sheet: "ow", x: 4, y: 260, w: 23, h: 27, scale: 3, foot: [3, 2] },
+  temple: { sheet: "ow", x: 37, y: 259, w: 21, h: 27, scale: 3, foot: [3, 2] },
+  arena: { sheet: "ow", x: 0, y: 226, w: 32, h: 29, scale: 3, foot: [5, 2] },
+  church: { sheet: "ow", x: 97, y: 293, w: 26, h: 42, scale: 3, foot: [4, 2] },
   well: { sheet: "ow", x: 101, y: 230, w: 22, h: 23, scale: 2, foot: [3, 2] },
-  // neighbor cottages: three distinct standalone houses from the overworld
-  // sheet, drawn at a scale that reads as a real (if modest) home next to the
-  // player's much larger `bighouse` while staying small enough to sit between
-  // the streets without overrunning them. The old house_a rect [0,288] was a
-  // haystack blob, not a house; repointed to the blue cottage.
-  house_a: { sheet: "ow", x: 16, y: 288, w: 14, h: 16, scale: 3, foot: [3, 2] }, // blue roof
-  house_b: { sheet: "ow", x: 32, y: 288, w: 16, h: 16, scale: 3, foot: [3, 2] }, // red barn
-  house_c: { sheet: "ow", x: 115, y: 267, w: 25, h: 19, scale: 2, foot: [4, 2] }, // tan lodge
   // town-scale props (1x). bighouse/rock_s/rock_b corrected the same way.
   bighouse: { sheet: "tw", x: 192, y: 25, w: 80, h: 127, scale: 1, foot: [5, 3] },
   tree: { sheet: "tw", x: 118, y: 16, w: 54, h: 63, scale: 1, foot: [2, 1] },
@@ -430,10 +423,6 @@ export const DIALOGS: Record<string, Dialog> = {
     category: "product",
     body: ["« The Castle: home of ThreatScaper, the town's flagship product. »"],
   },
-  neighbor: {
-    title: "Neighbor's House",
-    body: ["You knock. Nobody answers, they're probably reading the blog."],
-  },
   npc_kid: {
     title: "Kid",
     category: "guide",
@@ -531,37 +520,30 @@ export const TOWN: MapDef = {
   objects: [
     // home (north street, center): door warps into the room
     { sprite: "bighouse", tx: 19, ty: 14, dialog: "sign_home" },
-    // flagship castle (south street)
-    { sprite: "castle", tx: 14, ty: 24, dialog: "threatscaper" },
-    // east side
-    { sprite: "arena", tx: 28, ty: 24, dialog: "learning" },
-    { sprite: "church", tx: 33, ty: 24, dialog: "talks" },
-    { sprite: "temple", tx: 33, ty: 14, dialog: "about" },
+    { sprite: "temple", tx: 32, ty: 14, dialog: "about" },
+    // flagship castle + south-street buildings (all 3x, positions verified
+    // against the roads/plaza/avenue with the layout script)
+    { sprite: "castle", tx: 11, ty: 24, dialog: "threatscaper" },
+    { sprite: "arena", tx: 26, ty: 24, dialog: "learning" },
+    { sprite: "church", tx: 34, ty: 24, dialog: "talks" },
     // plaza
     { sprite: "well", tx: 18, ty: 20, dialog: "blog" },
     // signposts
     { sprite: "sign", tx: 24, ty: 14, dialog: "sign_welcome", label: "WELCOME" },
     { sprite: "sign", tx: 17, ty: 14, dialog: "sign_home", label: "STUDIO" },
-    { sprite: "sign", tx: 12, ty: 22, dialog: "sign_flagship", label: "FLAGSHIP" },
-    // neighbor cottages: placed one row above the streets (row 14 gap north,
-    // row 24 gap south) so their base clears the road, and horizontally clear
-    // of the buildings/signs/greenery on their rows (verified by layout math)
-    { sprite: "house_a", tx: 7, ty: 13, dialog: "neighbor" },
-    { sprite: "house_c", tx: 26, ty: 13, dialog: "neighbor" },
-    { sprite: "house_b", tx: 9, ty: 23, dialog: "neighbor" },
-    { sprite: "house_a", tx: 23, ty: 23, dialog: "neighbor" },
+    { sprite: "sign", tx: 16, ty: 22, dialog: "sign_flagship", label: "FLAGSHIP" },
     // west-side greenery (where the old security quarter stood)
     { sprite: "tree", tx: 6, ty: 21 }, { sprite: "tree", tx: 11, ty: 13 },
     { sprite: "stump", tx: 7, ty: 27 }, { sprite: "bush1", tx: 10, ty: 19 },
     // north-park greenery
     { sprite: "tree", tx: 5, ty: 9 }, { sprite: "tree", tx: 15, ty: 8 },
-    { sprite: "tree", tx: 36, ty: 9 }, { sprite: "bush1", tx: 11, ty: 9 },
+    { sprite: "tree", tx: 27, ty: 7 }, { sprite: "bush1", tx: 11, ty: 9 },
     { sprite: "bush2", tx: 24, ty: 10 }, { sprite: "rock_b", tx: 32, ty: 8 },
     { sprite: "stump", tx: 17, ty: 9 },
     // mid-town greenery
-    { sprite: "bush1", tx: 5, ty: 20 }, { sprite: "smalltree", tx: 37, ty: 21 },
-    { sprite: "bush2", tx: 5, ty: 21 }, { sprite: "rock_s", tx: 37, ty: 19 },
-    { sprite: "bush2", tx: 26, ty: 21 }, { sprite: "smalltree", tx: 30, ty: 17 },
+    { sprite: "bush1", tx: 5, ty: 20 }, { sprite: "smalltree", tx: 38, ty: 30 },
+    { sprite: "bush2", tx: 5, ty: 21 }, { sprite: "rock_s", tx: 8, ty: 19 },
+    { sprite: "bush2", tx: 24, ty: 22 }, { sprite: "smalltree", tx: 30, ty: 17 },
     // south green
     { sprite: "tree", tx: 5, ty: 31 }, { sprite: "tree", tx: 20, ty: 31 },
     { sprite: "tree", tx: 36, ty: 31 }, { sprite: "stump", tx: 24, ty: 29 },
