@@ -111,9 +111,9 @@ export const SPRITES = {
   rock_s: { sheet: "tw", x: 33, y: 148, w: 14, h: 8, scale: 1, foot: [1, 1] },
   rock_b: { sheet: "tw", x: 37, y: 156, w: 19, h: 36, scale: 1, foot: [1, 1] },
   // Pixel Crawler night-world props (1x)
-  pine1: { sheet: "pcTrees", x: 4, y: 9, w: 48, h: 103, scale: 1, foot: [2, 1] },
-  pine2: { sheet: "pcTrees", x: 54, y: 9, w: 52, h: 103, scale: 1, foot: [2, 1] },
-  pine_dead: { sheet: "pcTrees", x: 120, y: 17, w: 64, h: 95, scale: 1, foot: [2, 1] },
+  pine1: { sheet: "pcTrees", x: 4, y: 9, w: 54, h: 103, scale: 1, foot: [2, 1] },
+  pine2: { sheet: "pcTrees", x: 68, y: 9, w: 54, h: 103, scale: 1, foot: [2, 1] },
+  pine_dead: { sheet: "pcTrees", x: 141, y: 17, w: 43, h: 95, scale: 1, foot: [2, 1] },
   smithy: { sheet: "pcAnvil", x: 80, y: 36, w: 79, h: 56, scale: 1, foot: [5, 2] },
   torch: { sheet: "pcProps", x: 67, y: 40, w: 10, h: 15, scale: 1, foot: [1, 1] },
   grave: { sheet: "pcProps", x: 97, y: 4, w: 17, h: 18, scale: 1, foot: [1, 1] },
@@ -125,8 +125,8 @@ export const SPRITES = {
   // runtime-composed medieval buildings (walls + roofs + doors + windows;
   // rects match makeMedSheet in game.tsx)
   guildhouse: { sheet: "medgen", x: 0, y: 0, w: 128, h: 127, scale: 1, foot: [8, 2] },
-  archhouse: { sheet: "medgen", x: 144, y: 0, w: 111, h: 128, scale: 1, foot: [7, 2] },
-  keep: { sheet: "medgen", x: 272, y: 0, w: 144, h: 96, scale: 1, foot: [9, 2] },
+  archhouse: { sheet: "medgen", x: 144, y: 0, w: 128, h: 127, scale: 1, foot: [8, 2] },
+  keep: { sheet: "medgen", x: 280, y: 0, w: 144, h: 96, scale: 1, foot: [9, 2] },
   // interior props
   chest: { sheet: "ob", x: 161, y: 19, w: 15, h: 13, scale: 1, foot: [1, 1] },
   cabinet: { sheet: "ob", x: 176, y: 80, w: 16, h: 16, scale: 1, foot: [1, 1] },

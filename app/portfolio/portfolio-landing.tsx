@@ -86,6 +86,40 @@ function Nav({ scrolled }: { scrolled: boolean }) {
               {item.label}
             </a>
           ))}
+          <span className="h-4 w-px bg-black/[0.1] dark:bg-white/[0.12]" />
+          <Link
+            href="/"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            Pixel World
+          </Link>
+          <Link
+            href="/about"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            About
+          </Link>
+          <Link
+            href="/n"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            Blog
+          </Link>
+          <Link
+            href="/learning"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            Learning
+          </Link>
+          <a
+            href={THREATSCAPER}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            ThreatScaper
+            <ExternalLink className="w-3 h-3" />
+          </a>
           <a
             href="#connect"
             className="apple-gloss-btn-secondary py-1.5 px-3.5 text-[13px]"

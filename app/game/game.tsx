@@ -159,9 +159,21 @@ function makeGenSheet(): HTMLCanvasElement {
 /**
  * Compose the Midnight Keep buildings from the Pixel Crawler modular kit
  * (wall strips + roof assemblies + door/window props + castle pieces).
- * Piece rects were auto-trimmed off the sheets and the layout verified
- * against a rendered mock-up. Atlas rects consumed by world.ts:
- *   guildhouse (0,0,128,127)  archhouse (144,0,111,128)  keep (272,0,144,96)
+ *
+ * The "_big" roof assets have an UNEVEN bottom silhouette — their two gable
+ * slopes dip to a shallowest point partway down (verified by profiling the
+ * source alpha channel: brown_big/teal_big both bottom out at source y=70,
+ * i.e. local y=64 after the sheet's own trim offset) rather than forming a
+ * flat edge across the building width. A single wall strip butted against
+ * the roof's overall bottom therefore leaves gaps under the shallow parts
+ * of the eaves, showing bare ground through the "attic". Fix: draw the wall
+ * texture doubled (tiled top-to-bottom) starting well above that shallowest
+ * point, THEN draw the roof on top — the roof hides the excess wall
+ * wherever it has full coverage, and the tiled wall fills in everywhere it
+ * doesn't, so no gap is possible regardless of the roof's exact silhouette.
+ *
+ * Atlas rects consumed by world.ts:
+ *   guildhouse (0,0,128,127)  archhouse (144,0,128,127)  keep (280,0,144,96)
  */
 function makeMedSheet(sheets: Record<string, CanvasImageSource>): HTMLCanvasElement {
   const c = document.createElement("canvas");
@@ -175,26 +187,30 @@ function makeMedSheet(sheets: Record<string, CanvasImageSource>): HTMLCanvasElem
   ) => g.drawImage(img, sx, sy, sw, sh, dx, dy, sw * sc, sh * sc);
   const R = sheets.pcRoofs, W = sheets.pcWalls, P = sheets.pcBProps, D = sheets.pcDungeon;
 
-  // drafting guild: timber-framed wall, big brown gable roof, chimney,
-  // banded door, green shuttered windows
+  // drafting guild: timber-framed wall (tiled tall), big brown gable roof,
+  // chimney, banded door, green shuttered windows
+  d(W, 288, 189, 96, 49, 16, 29);
   d(W, 288, 189, 96, 49, 16, 78);
   d(R, 0, 6, 128, 86, 0, 0);
-  d(P, 4, 73, 24, 53, 90, 14);
+  d(P, 4, 73, 24, 53, 86, 14);
   d(P, 134, 27, 20, 37, 54, 90);
   d(P, 128, 64, 38, 32, 19, 92);
   d(P, 128, 64, 38, 32, 75, 92);
 
-  // archives: plank wall, teal gable roof, arched door and windows
-  d(W, 96, 186, 96, 52, 144 + 8, 76);
-  d(R, 129, 92, 111, 88, 144, 0);
-  d(P, 166, 25, 20, 39, 144 + 46, 89);
-  d(P, 101, 60, 22, 36, 144 + 16, 91);
-  d(P, 101, 60, 22, 36, 144 + 74, 91);
+  // archives: brick wall (tiled tall, distinct from guild's timber), big
+  // teal gable roof, arched door and windows
+  d(W, 480, 189, 96, 49, 144 + 8, 29);
+  d(W, 480, 189, 96, 49, 144 + 8, 78);
+  d(R, 128, 6, 128, 86, 144, 0);
+  d(P, 166, 25, 20, 39, 144 + 54, 90);
+  d(P, 101, 60, 22, 36, 144 + 24, 91);
+  d(P, 101, 60, 22, 36, 144 + 82, 91);
 
   // the keep: castle curtain wall (crenellations + banner trims) at 2x with
-  // the arched wooden gate inlaid at center
-  d(D, 0, 230, 72, 48, 272, 0, 2);
-  d(D, 0, 112, 32, 34, 272 + 40, 28, 2);
+  // the arched wooden gate inlaid at center — self-contained stone piece,
+  // no gable roof involved, so it isn't affected by the roofline issue above
+  d(D, 0, 230, 72, 48, 280, 0, 2);
+  d(D, 0, 112, 32, 34, 280 + 40, 28, 2);
 
   return c;
 }
@@ -339,6 +355,8 @@ export default function Game() {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [canInteract, setCanInteract] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [volume, setVolume] = useState(0.16);
+  const volumeRef = useRef(0.16);
   const [legendOpen, setLegendOpen] = useState(true);
 
   // refs shared with the game loop
@@ -365,6 +383,13 @@ export default function Game() {
     paused: true,
     interactTarget: null,
   });
+
+  /* restore saved volume once on mount */
+  useEffect(() => {
+    const saved = localStorage.getItem("town-volume");
+    const v = saved ? parseFloat(saved) : NaN;
+    if (!Number.isNaN(v)) { volumeRef.current = v; setVolume(v); }
+  }, []);
 
   const openDialog = useCallback((id: string) => {
     const d = DIALOGS[id];
@@ -406,9 +431,16 @@ export default function Game() {
     const abs = new URL(src, window.location.href).href;
     if (a.src !== abs) {
       a.src = src;
-      a.volume = 0.3;
     }
+    a.volume = volumeRef.current;
     if (play) a.play().catch(() => {});
+  }, []);
+
+  const changeVolume = useCallback((v: number) => {
+    volumeRef.current = v;
+    setVolume(v);
+    if (audioRef.current) audioRef.current.volume = v;
+    localStorage.setItem("town-volume", String(v));
   }, []);
 
   /* enter a world (home-screen picker or WORLDS button) */
@@ -463,7 +495,11 @@ export default function Game() {
         e.preventDefault();
         if (dialog) closeDialog(); else tryInteract();
       }
-      if (e.key === "Escape" && dialog) closeDialog();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (dialog) closeDialog(); else openPicker(); // leave world → world selector
+        return;
+      }
       if (e.key === "l" || e.key === "L") setLegendOpen((v) => !v);
     };
     const up = (e: KeyboardEvent) => {
@@ -473,7 +509,7 @@ export default function Game() {
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
-  }, [dialog, picker, tryInteract, closeDialog, enterWorld, closePicker]);
+  }, [dialog, picker, tryInteract, closeDialog, enterWorld, closePicker, openPicker]);
 
   /* boot: load sheets, build maps, run the loop */
   useEffect(() => {
@@ -820,21 +856,21 @@ export default function Game() {
 
       {/* HUD: legend */}
       {!picker && (
-        <div className="absolute top-3 right-3 z-20 text-[8px] leading-relaxed">
+        <div className="absolute top-3 right-3 z-20 text-[11px] leading-relaxed">
           <button
             onClick={() => setLegendOpen((v) => !v)}
-            className="mb-1 w-full text-left px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/85"
+            className="mb-1.5 w-full text-left px-3.5 py-2.5 rounded bg-black/60 border border-white/15 text-white/85"
           >
-            LEGEND {legendOpen ? "▾" : "▸"} <span className="text-white/35">(L)</span>
+            LEGEND {legendOpen ? "▾" : "▸"} <span className="text-white/35 text-[9px]">(L)</span>
           </button>
           {legendOpen && (
-            <div className="px-2.5 py-2 rounded bg-black/60 border border-white/15 space-y-1.5">
+            <div className="px-3.5 py-3 rounded bg-black/60 border border-white/15 space-y-2.5">
               {Object.entries(CATEGORIES).map(([k, c]) => (
-                <div key={k} className="flex items-center gap-2 text-white/80">
+                <div key={k} className="flex items-center gap-3 text-white/85">
                   {k === "cherished" ? (
-                    <span className="text-[9px]" style={{ color: c.color }}>♥</span>
+                    <span className="text-[14px] w-3 text-center" style={{ color: c.color }}>♥</span>
                   ) : (
-                    <span className="inline-block w-2 h-2 rotate-45" style={{ background: c.color }} />
+                    <span className="inline-block w-3 h-3 rotate-45 shrink-0" style={{ background: c.color }} />
                   )}
                   {c.label}
                 </div>
@@ -846,18 +882,31 @@ export default function Game() {
 
       {/* HUD: bottom-left controls */}
       {!picker && (
-        <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 text-[8px]">
+        <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2 text-[8px] max-w-[calc(100vw-1.5rem)]">
           <button onClick={openPicker} className={`${hudBtn} text-amber-200`}>
-            ◆ WORLDS
+            ◆ WORLDS <span className="text-amber-200/50">(ESC)</span>
           </button>
           <button onClick={toggleMusic} className={hudBtn}>
             {muted ? "♪ OFF" : "♪ ON"}
           </button>
+          <div className={`${hudBtn} flex items-center gap-1.5`}>
+            <span className="text-white/50">VOL</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              className="w-16 accent-amber-300 cursor-pointer align-middle"
+              aria-label="Music volume"
+            />
+          </div>
           <a href="/portfolio" className={`${hudBtn} text-white/60 hover:text-white/90`}>
             CLASSIC SITE
           </a>
           <span className="hidden sm:inline px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/45">
-            WASD/←↑↓→ MOVE · E INTERACT
+            WASD/←↑↓→ MOVE · E INTERACT · ESC LEAVE
           </span>
           {canInteract && !dialog && (
             <span className="px-2.5 py-1.5 rounded bg-amber-300/90 text-black/90 animate-pulse">PRESS E</span>
@@ -977,7 +1026,7 @@ export default function Game() {
             </div>
 
             <p className="text-[8px] text-white/45 leading-[2] mb-5">
-              WASD / ARROWS — MOVE&nbsp;&nbsp;·&nbsp;&nbsp;E — INTERACT&nbsp;&nbsp;·&nbsp;&nbsp;L — LEGEND
+              WASD / ARROWS — MOVE&nbsp;&nbsp;·&nbsp;&nbsp;E — INTERACT&nbsp;&nbsp;·&nbsp;&nbsp;L — LEGEND&nbsp;&nbsp;·&nbsp;&nbsp;ESC — WORLDS
             </p>
 
             <div className="flex items-center justify-center gap-3">
@@ -986,7 +1035,7 @@ export default function Game() {
                   onClick={closePicker}
                   className="text-[8px] px-4 py-2 rounded border border-white/30 text-white/70 hover:text-white"
                 >
-                  BACK TO GAME
+                  BACK TO GAME <span className="text-white/40">(ESC)</span>
                 </button>
               )}
               <a
