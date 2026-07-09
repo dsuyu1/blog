@@ -845,7 +845,7 @@ export default function Game() {
   const hold = (dir: Facing, on: boolean) => () => { state.current.held[dir] = on; };
   const padBtn =
     "flex items-center justify-center select-none rounded-md bg-white/10 active:bg-white/25 border border-white/20 text-white/80 w-12 h-12 text-lg";
-  const hudBtn = "px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/85";
+  const hudBtn = "px-3 py-2 rounded bg-black/60 border border-white/15 text-white/85";
 
   const cat = dialog?.category ? CATEGORIES[dialog.category] : null;
 
@@ -882,7 +882,7 @@ export default function Game() {
 
       {/* HUD: bottom-left controls */}
       {!picker && (
-        <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2 text-[8px] max-w-[calc(100vw-1.5rem)]">
+        <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2 text-[10px] max-w-[calc(100vw-1.5rem)]">
           <button onClick={openPicker} className={`${hudBtn} text-amber-200`}>
             ◆ WORLDS <span className="text-amber-200/50">(ESC)</span>
           </button>
@@ -905,11 +905,11 @@ export default function Game() {
           <a href="/portfolio" className={`${hudBtn} text-white/60 hover:text-white/90`}>
             CLASSIC SITE
           </a>
-          <span className="hidden sm:inline px-2.5 py-1.5 rounded bg-black/60 border border-white/15 text-white/45">
+          <span className="hidden sm:inline px-3 py-2 rounded bg-black/60 border border-white/15 text-white/45">
             WASD/←↑↓→ MOVE · E INTERACT · ESC LEAVE
           </span>
           {canInteract && !dialog && (
-            <span className="px-2.5 py-1.5 rounded bg-amber-300/90 text-black/90 animate-pulse">PRESS E</span>
+            <span className="px-3 py-2 rounded bg-amber-300/90 text-black/90 animate-pulse">PRESS E</span>
           )}
         </div>
       )}
@@ -939,27 +939,27 @@ export default function Game() {
 
       {/* dialogue box */}
       {dialog && (
-        <div className="absolute inset-x-0 bottom-0 z-30 p-3 sm:p-5 flex justify-center">
-          <div className="w-full max-w-2xl rounded-lg border-4 border-white/85 bg-[#141126]/95 shadow-[0_0_0_4px_rgba(0,0,0,0.6)] p-4 sm:p-5 text-white">
-            <div className="flex items-center gap-3 mb-3 flex-wrap">
-              <h2 className="text-[11px] sm:text-[13px] text-amber-200">{dialog.title}</h2>
+        <div className="absolute inset-x-0 bottom-0 z-30 p-3 sm:p-6 flex justify-center">
+          <div className="w-full max-w-3xl rounded-lg border-4 border-white/85 bg-[#141126]/95 shadow-[0_0_0_4px_rgba(0,0,0,0.6)] p-5 sm:p-7 text-white">
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+              <h2 className="text-[15px] sm:text-[17px] text-amber-200">{dialog.title}</h2>
               {cat && (
                 <span
-                  className="text-[7px] px-2 py-1 rounded border"
+                  className="text-[10px] px-2.5 py-1 rounded border"
                   style={{ color: cat.color, borderColor: cat.color }}
                 >
                   {cat.label.toUpperCase()}
                 </span>
               )}
-              {dialog.cherished && <span className="text-[10px] text-pink-400">♥</span>}
+              {dialog.cherished && <span className="text-[13px] text-pink-400">♥</span>}
             </div>
             {dialog.body.map((p, i) => (
-              <p key={i} className="text-[8px] sm:text-[9px] leading-[1.9] text-white/85 mb-2">{p}</p>
+              <p key={i} className="text-[11px] sm:text-[12px] leading-[1.9] text-white/85 mb-2.5">{p}</p>
             ))}
             {dialog.talks && (
-              <ul className="mb-2 space-y-2">
+              <ul className="mb-2.5 space-y-2.5">
                 {dialog.talks.map((t, i) => (
-                  <li key={i} className="text-[8px] leading-[1.8] text-white/80">
+                  <li key={i} className="text-[11px] leading-[1.8] text-white/80">
                     <span className="text-cyan-200">▸ {t.title}</span>
                     <br />
                     <span className="text-white/45">{t.event} · {t.date}</span>
@@ -968,21 +968,21 @@ export default function Game() {
               </ul>
             )}
             {dialog.tags && (
-              <p className="text-[7px] text-white/40 mb-2">{dialog.tags.join(" · ")}</p>
+              <p className="text-[10px] text-white/40 mb-2.5">{dialog.tags.join(" · ")}</p>
             )}
-            <div className="flex flex-wrap items-center gap-2 mt-3">
+            <div className="flex flex-wrap items-center gap-2.5 mt-4">
               {dialog.links?.map((l) => (
                 <a
                   key={l.href}
                   href={l.href}
                   target={l.href.startsWith("http") ? "_blank" : undefined}
                   rel={l.href.startsWith("http") ? "noreferrer" : undefined}
-                  className="text-[8px] px-3 py-2 rounded bg-amber-300 text-black/90 hover:bg-amber-200"
+                  className="text-[11px] px-4 py-2.5 rounded bg-amber-300 text-black/90 hover:bg-amber-200"
                 >
                   {l.label}
                 </a>
               ))}
-              <button onClick={closeDialog} className="text-[8px] px-3 py-2 rounded border border-white/30 text-white/70 hover:text-white ml-auto">
+              <button onClick={closeDialog} className="text-[11px] px-4 py-2.5 rounded border border-white/30 text-white/70 hover:text-white ml-auto">
                 CLOSE (E)
               </button>
             </div>
@@ -993,39 +993,39 @@ export default function Game() {
       {/* home screen: world picker */}
       {picker && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0b0813]/94 p-6 overflow-y-auto">
-          <div className="text-center max-w-2xl w-full">
-            <p className="text-[9px] text-emerald-300/80 mb-4 tracking-widest">DAMIAN VILLARREAL PRESENTS</p>
-            <h1 className="text-xl sm:text-3xl text-amber-200 mb-4 leading-relaxed drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]">
+          <div className="text-center max-w-3xl w-full">
+            <p className="text-[10px] text-emerald-300/80 mb-4 tracking-widest">DAMIAN VILLARREAL PRESENTS</p>
+            <h1 className="text-2xl sm:text-4xl text-amber-200 mb-5 leading-relaxed drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]">
               DAMIAN&apos;S WORLDS
             </h1>
-            <p className="text-[8px] sm:text-[9px] text-white/70 leading-[2] mb-6">
+            <p className="text-[11px] sm:text-[12px] text-white/70 leading-[2] mb-7">
               A walkable portfolio in three worlds. Each one is home to a
               different side of my work — pick a world to explore it.
             </p>
 
-            <div className="grid gap-3 sm:grid-cols-3 mb-6">
+            <div className="grid gap-4 sm:grid-cols-3 mb-7">
               {WORLDS.map((w) => (
                 <button
                   key={w.id}
                   onClick={() => enterWorld(w.id)}
                   disabled={!ready}
-                  className="group px-4 py-5 rounded-lg border-2 bg-black/40 hover:bg-black/20 disabled:opacity-40 transition-colors text-center"
+                  className="group px-5 py-6 rounded-lg border-2 bg-black/40 hover:bg-black/20 disabled:opacity-40 transition-colors text-center"
                   style={{ borderColor: w.color }}
                 >
-                  <span className="block text-[10px] mb-2" style={{ color: w.color }}>
+                  <span className="block text-[13px] mb-2.5" style={{ color: w.color }}>
                     {w.name}
                   </span>
-                  <span className="block text-[7px] text-white/60 leading-[1.8]">
+                  <span className="block text-[10px] text-white/60 leading-[1.8]">
                     {w.focus}
                   </span>
-                  <span className="mt-3 inline-block text-[7px] px-2 py-1 rounded bg-white/10 text-white/70 group-hover:bg-white/20">
+                  <span className="mt-4 inline-block text-[10px] px-3 py-1.5 rounded bg-white/10 text-white/70 group-hover:bg-white/20">
                     {ready ? "ENTER" : "LOADING…"}
                   </span>
                 </button>
               ))}
             </div>
 
-            <p className="text-[8px] text-white/45 leading-[2] mb-5">
+            <p className="text-[10px] text-white/45 leading-[2] mb-6">
               WASD / ARROWS — MOVE&nbsp;&nbsp;·&nbsp;&nbsp;E — INTERACT&nbsp;&nbsp;·&nbsp;&nbsp;L — LEGEND&nbsp;&nbsp;·&nbsp;&nbsp;ESC — WORLDS
             </p>
 
@@ -1033,14 +1033,14 @@ export default function Game() {
               {started && (
                 <button
                   onClick={closePicker}
-                  className="text-[8px] px-4 py-2 rounded border border-white/30 text-white/70 hover:text-white"
+                  className="text-[10px] px-5 py-2.5 rounded border border-white/30 text-white/70 hover:text-white"
                 >
                   BACK TO GAME <span className="text-white/40">(ESC)</span>
                 </button>
               )}
               <a
                 href="/portfolio"
-                className="text-[8px] px-4 py-2 rounded border border-white/30 text-white/70 hover:text-white inline-block"
+                className="text-[10px] px-5 py-2.5 rounded border border-white/30 text-white/70 hover:text-white inline-block"
               >
                 CLASSIC SITE
               </a>
