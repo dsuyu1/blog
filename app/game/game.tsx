@@ -10,9 +10,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Press_Start_2P } from "next/font/google";
 import {
-  TILE, SHEET_SRC, SPRITES, GRASS, DIRT, INTERIOR, CATEGORIES, DIALOGS,
-  MAPS, WORLDS, MUSIC_SRC, type SpriteDef, type MapDef, type MapId,
-  type WorldId, type Facing, type Dialog, type NpcDef, type Warp,
+  TILE, SHEET_SRC, SPRITES, GRASS, DIRT, PC_GRASS, PC_BRICK, INTERIOR,
+  CATEGORIES, DIALOGS, MAPS, WORLDS, MUSIC_SRC, type SpriteDef, type MapDef,
+  type MapId, type WorldId, type Facing, type Dialog, type NpcDef, type Warp,
 } from "./world";
 
 const pixelFont = Press_Start_2P({ weight: "400", subsets: ["latin"] });
@@ -156,6 +156,49 @@ function makeGenSheet(): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * Compose the Midnight Keep buildings from the Pixel Crawler modular kit
+ * (wall strips + roof assemblies + door/window props + castle pieces).
+ * Piece rects were auto-trimmed off the sheets and the layout verified
+ * against a rendered mock-up. Atlas rects consumed by world.ts:
+ *   guildhouse (0,0,128,127)  archhouse (144,0,111,128)  keep (272,0,144,96)
+ */
+function makeMedSheet(sheets: Record<string, CanvasImageSource>): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = 432; c.height = 128;
+  const g = c.getContext("2d")!;
+  g.imageSmoothingEnabled = false;
+  const d = (
+    img: CanvasImageSource,
+    sx: number, sy: number, sw: number, sh: number,
+    dx: number, dy: number, sc = 1,
+  ) => g.drawImage(img, sx, sy, sw, sh, dx, dy, sw * sc, sh * sc);
+  const R = sheets.pcRoofs, W = sheets.pcWalls, P = sheets.pcBProps, D = sheets.pcDungeon;
+
+  // drafting guild: timber-framed wall, big brown gable roof, chimney,
+  // banded door, green shuttered windows
+  d(W, 288, 189, 96, 49, 16, 78);
+  d(R, 0, 6, 128, 86, 0, 0);
+  d(P, 4, 73, 24, 53, 90, 14);
+  d(P, 134, 27, 20, 37, 54, 90);
+  d(P, 128, 64, 38, 32, 19, 92);
+  d(P, 128, 64, 38, 32, 75, 92);
+
+  // archives: plank wall, teal gable roof, arched door and windows
+  d(W, 96, 186, 96, 52, 144 + 8, 76);
+  d(R, 129, 92, 111, 88, 144, 0);
+  d(P, 166, 25, 20, 39, 144 + 46, 89);
+  d(P, 101, 60, 22, 36, 144 + 16, 91);
+  d(P, 101, 60, 22, 36, 144 + 74, 91);
+
+  // the keep: castle curtain wall (crenellations + banner trims) at 2x with
+  // the arched wooden gate inlaid at center
+  d(D, 0, 230, 72, 48, 272, 0, 2);
+  d(D, 0, 112, 32, 34, 272 + 40, 28, 2);
+
+  return c;
+}
+
 const THEME_BG: Record<MapDef["theme"], string> = {
   interior: "#120b1d",
   village: "#1c2b1a",
@@ -205,8 +248,20 @@ function buildMap(
     g.fillStyle = THEME_BG.scene;
     g.fillRect(0, 0, w * TILE, h * TILE);
     g.drawImage(sheets.cyberBg as HTMLImageElement, 0, 0);
+  } else if (def.ground === "crawler") {
+    // night hamlet: Pixel Crawler dark grass, brick roads on the mask
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        if (isDirt(x, y)) {
+          const t = PC_BRICK[(rng() * PC_BRICK.length) | 0];
+          g.drawImage(sheets.pcFloors as HTMLImageElement, t.x, t.y, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
+        } else {
+          const t = PC_GRASS[(rng() * PC_GRASS.length) | 0];
+          g.drawImage(sheets.pcFloors as HTMLImageElement, t.x, t.y, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
+        }
+      }
   } else {
-    // village & night: grass with seeded variety, then autotiled dirt paths
+    // village: grass with seeded variety, then autotiled dirt paths
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
         const r = rng();
@@ -446,6 +501,7 @@ export default function Game() {
       const s = state.current;
       s.sheets = Object.fromEntries(entries);
       s.sheets.gen = makeGenSheet();
+      s.sheets.medgen = makeMedSheet(s.sheets);
       s.sheets.player = chars[0];
       s.sheets.kid = chars[1];
       s.sheets.pirate = chars[2];

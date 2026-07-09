@@ -30,11 +30,17 @@ export type SheetKey =
   | "pcAnvil" // Pixel Crawler smithy stations
   | "pcProps" // Pixel Crawler dungeon props (torches, banners, graves)
   | "pcRocks" // Pixel Crawler boulders
+  | "pcFloors" // Pixel Crawler floor tiles (dark grass, brick road)
+  | "pcWalls" // Pixel Crawler building wall strips
+  | "pcRoofs" // Pixel Crawler roof assemblies
+  | "pcBProps" // Pixel Crawler building props (doors, windows, benches)
+  | "pcDungeon" // Pixel Crawler castle/dungeon pieces (keep gatehouse)
   | "bonfire" // Pixel Crawler animated bonfire (4 frames of 32x32)
   | "cyberBg" // ansimuz cyberpunk street scene (608x192)
-  | "gen"; // runtime-generated pixel art (signpost, desk, bed, computer…)
+  | "gen" // runtime-generated pixel art (signpost, desk, bed, computer…)
+  | "medgen"; // runtime-composed medieval buildings (see makeMedSheet)
 
-export const SHEET_SRC: Record<Exclude<SheetKey, "gen">, string> = {
+export const SHEET_SRC: Record<Exclude<SheetKey, "gen" | "medgen">, string> = {
   ow: "/game/overworld.png",
   tw: "/game/town.png",
   dg: "/game/dungeon.png",
@@ -43,6 +49,11 @@ export const SHEET_SRC: Record<Exclude<SheetKey, "gen">, string> = {
   pcAnvil: "/game/pc-anvil.png",
   pcProps: "/game/pc-props.png",
   pcRocks: "/game/pc-rocks.png",
+  pcFloors: "/game/pc-floors.png",
+  pcWalls: "/game/pc-walls.png",
+  pcRoofs: "/game/pc-roofs.png",
+  pcBProps: "/game/pc-bprops.png",
+  pcDungeon: "/game/pc-dungeon.png",
   bonfire: "/game/bonfire.png",
   cyberBg: "/game/cyber-street.png",
 };
@@ -106,9 +117,16 @@ export const SPRITES = {
   smithy: { sheet: "pcAnvil", x: 80, y: 36, w: 79, h: 56, scale: 1, foot: [5, 2] },
   torch: { sheet: "pcProps", x: 67, y: 40, w: 10, h: 15, scale: 1, foot: [1, 1] },
   grave: { sheet: "pcProps", x: 97, y: 4, w: 17, h: 18, scale: 1, foot: [1, 1] },
-  boulder: { sheet: "pcRocks", x: 1, y: 0, w: 59, h: 60, scale: 1, foot: [4, 2] },
-  boulder2: { sheet: "pcRocks", x: 65, y: 17, w: 59, h: 43, scale: 1, foot: [4, 2] },
+  boulder: { sheet: "pcRocks", x: 2, y: 19, w: 28, h: 43, scale: 1, foot: [2, 1] },
+  boulder2: { sheet: "pcRocks", x: 98, y: 19, w: 28, h: 43, scale: 1, foot: [2, 1] },
   bonfire: { sheet: "bonfire", x: 0, y: 0, w: 32, h: 32, scale: 1, foot: [2, 1], anim: { frames: 4, ms: 140 } },
+  bench: { sheet: "pcBProps", x: 84, y: 160, w: 52, h: 24, scale: 1, foot: [3, 1] },
+  planter: { sheet: "pcBProps", x: 18, y: 157, w: 34, h: 14, scale: 1, foot: [2, 1] },
+  // runtime-composed medieval buildings (walls + roofs + doors + windows;
+  // rects match makeMedSheet in game.tsx)
+  guildhouse: { sheet: "medgen", x: 0, y: 0, w: 128, h: 127, scale: 1, foot: [8, 2] },
+  archhouse: { sheet: "medgen", x: 144, y: 0, w: 111, h: 128, scale: 1, foot: [7, 2] },
+  keep: { sheet: "medgen", x: 272, y: 0, w: 144, h: 96, scale: 1, foot: [9, 2] },
   // interior props
   chest: { sheet: "ob", x: 161, y: 19, w: 15, h: 13, scale: 1, foot: [1, 1] },
   cabinet: { sheet: "ob", x: 176, y: 80, w: 16, h: 16, scale: 1, foot: [1, 1] },
@@ -143,6 +161,17 @@ export const DIRT = {
   L: { x: 176, y: 64 }, C: { x: 192, y: 64 }, R: { x: 208, y: 64 },
   BL: { x: 176, y: 80 }, B: { x: 192, y: 80 }, BR: { x: 208, y: 80 },
 };
+
+// Pixel Crawler night-world ground (pcFloors sheet): solid dark-grass fills
+// picked from the blob arms, and brick tiles from the road patch
+// (verified 100%-opaque cells — the first blob row has scalloped edges and
+// the brick patch is not 16-aligned at its top-left corner)
+export const PC_GRASS = [
+  { x: 16, y: 160 }, { x: 32, y: 160 }, { x: 16, y: 176 }, { x: 48, y: 160 },
+];
+export const PC_BRICK = [
+  { x: 256, y: 16 }, { x: 272, y: 16 }, { x: 272, y: 32 }, { x: 288, y: 48 },
+];
 
 // interior tiles (dungeon sheet)
 export const INTERIOR = {
@@ -464,6 +493,9 @@ export interface MapDef {
   w: number;
   h: number;
   theme: "interior" | "village" | "night" | "scene";
+  // ground art for village/night themes: village grass+dirt (default) or
+  // Pixel Crawler dark grass + brick roads
+  ground?: "crawler";
   music: "cliffs" | "cyber";
   // walkable bounds (everything outside is solid)
   bounds: { x0: number; y0: number; x1: number; y1: number };
@@ -570,54 +602,59 @@ export const ROOM: MapDef = {
 
 export const MEDIEVAL: MapDef = {
   id: "medieval",
-  w: 28,
-  h: 24,
+  w: 30,
+  h: 26,
   theme: "night",
+  ground: "crawler",
   music: "cliffs",
-  bounds: { x0: 2, y0: 4, x1: 25, y1: 20 },
+  bounds: { x0: 2, y0: 4, x1: 27, y1: 22 },
   dirt: [
-    [4, 12, 20, 2], // main road
-    [11, 6, 2, 6], // path up to the keep
-    [10, 14, 6, 4], // bonfire clearing
+    // brick roads (crawler ground renders the mask as brick)
+    [4, 13, 22, 2], // main road
+    [14, 11, 2, 2], // keep approach
+    [6, 11, 2, 2], // guild approach
+    [24, 11, 2, 2], // archives approach
+    [10, 16, 6, 3], // bonfire clearing
   ],
   objects: [
-    // the keep (zero-trust architecture)
-    { sprite: "fortress", tx: 10, ty: 9, dialog: "zerotrust", label: "THE KEEP", light: 44 },
-    { sprite: "torch", tx: 9, ty: 10, light: 30 },
-    { sprite: "torch", tx: 14, ty: 10, light: 30 },
-    // drafting guild (west)
-    { sprite: "bighouse", tx: 3, ty: 11, dialog: "guild", label: "DRAFTING GUILD" },
-    // the forge (east)
-    { sprite: "smithy", tx: 17, ty: 11, dialog: "forge", label: "THE FORGE", light: 36 },
-    // the archives (south-east)
-    { sprite: "temple", tx: 20, ty: 18, dialog: "archives", label: "ARCHIVES" },
-    { sprite: "torch", tx: 19, ty: 18, light: 30 },
+    // north row: guild hall, keep gatehouse, archives — all composed from
+    // the Pixel Crawler walls/roofs/props + castle pieces
+    { sprite: "guildhouse", tx: 2, ty: 10, dialog: "guild", label: "DRAFTING GUILD" },
+    { sprite: "keep", tx: 11, ty: 10, dialog: "zerotrust", label: "THE KEEP", light: 44 },
+    { sprite: "archhouse", tx: 21, ty: 10, dialog: "archives", label: "ARCHIVES" },
+    { sprite: "torch", tx: 10, ty: 11, light: 30 },
+    { sprite: "torch", tx: 20, ty: 11, light: 30 },
+    // the forge (south-east of the road)
+    { sprite: "smithy", tx: 17, ty: 17, dialog: "forge", label: "THE FORGE", light: 36 },
     // bonfire clearing (south-center)
-    { sprite: "bonfire", tx: 12, ty: 15, dialog: "bonfire", light: 52 },
-    // graveyard corner
-    { sprite: "grave", tx: 22, ty: 6 }, { sprite: "grave", tx: 24, ty: 7 },
-    { sprite: "grave", tx: 23, ty: 8 }, { sprite: "pine_dead", tx: 24, ty: 5 },
+    { sprite: "bonfire", tx: 12, ty: 17, dialog: "bonfire", light: 52 },
+    // guild frontage
+    { sprite: "bench", tx: 3, ty: 12 },
+    { sprite: "planter", tx: 8, ty: 12 },
+    // graveyard corner (south-east)
+    { sprite: "grave", tx: 24, ty: 20 }, { sprite: "grave", tx: 26, ty: 21 },
+    { sprite: "grave", tx: 25, ty: 19 }, { sprite: "pine_dead", tx: 26, ty: 18 },
     // boulders
-    { sprite: "boulder", tx: 4, ty: 7 }, { sprite: "boulder2", tx: 16, ty: 19 },
+    { sprite: "boulder", tx: 4, ty: 17 }, { sprite: "boulder2", tx: 23, ty: 15 },
     // pine forest border & scatter
     { sprite: "pine1", tx: 2, ty: 4 }, { sprite: "pine2", tx: 5, ty: 5 },
     { sprite: "pine1", tx: 8, ty: 4 }, { sprite: "pine2", tx: 15, ty: 5 },
-    { sprite: "pine1", tx: 18, ty: 4 }, { sprite: "pine2", tx: 20, ty: 5 },
-    { sprite: "pine1", tx: 2, ty: 10 }, { sprite: "pine2", tx: 2, ty: 16 },
-    { sprite: "pine1", tx: 4, ty: 20 }, { sprite: "pine2", tx: 8, ty: 19 },
-    { sprite: "pine1", tx: 12, ty: 20 }, { sprite: "pine2", tx: 25, ty: 12 },
-    { sprite: "pine1", tx: 25, ty: 16 }, { sprite: "pine_dead", tx: 6, ty: 9 },
-    { sprite: "pine2", tx: 24, ty: 20 },
+    { sprite: "pine1", tx: 18, ty: 4 }, { sprite: "pine2", tx: 22, ty: 4 },
+    { sprite: "pine1", tx: 25, ty: 5 }, { sprite: "pine2", tx: 2, ty: 16 },
+    { sprite: "pine1", tx: 2, ty: 22 }, { sprite: "pine2", tx: 6, ty: 21 },
+    { sprite: "pine1", tx: 10, ty: 22 }, { sprite: "pine2", tx: 14, ty: 21 },
+    { sprite: "pine1", tx: 18, ty: 22 }, { sprite: "pine2", tx: 27, ty: 13 },
+    { sprite: "pine_dead", tx: 27, ty: 9 },
   ],
   warps: {},
   npcs: [
     {
-      id: "soldier", kind: "strip", sheet: "soldier", x: 12, y: 11,
+      id: "soldier", kind: "strip", sheet: "soldier", x: 14, y: 12,
       dialog: "npc_soldier", wander: 0,
       strip: { frames: 6, fw: 100, fh: 100, footY: 70 },
     },
     {
-      id: "orc", kind: "strip", sheet: "orc", x: 14, y: 16,
+      id: "orc", kind: "strip", sheet: "orc", x: 14, y: 18,
       dialog: "npc_orc", wander: 0,
       strip: { frames: 6, fw: 100, fh: 100, footY: 70, flip: true },
     },
@@ -674,7 +711,7 @@ export const WORLDS: World[] = [
     name: "MIDNIGHT KEEP",
     focus: "Architecture & System Design",
     color: "#67e8f9",
-    spawn: { map: "medieval", x: 12, y: 13, facing: "up" },
+    spawn: { map: "medieval", x: 14, y: 14, facing: "up" },
   },
   {
     id: "cyber",
