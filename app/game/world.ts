@@ -102,12 +102,14 @@ export const SPRITES = {
   arena: { sheet: "ow", x: 0, y: 226, w: 32, h: 29, scale: 2, foot: [4, 2] },
   church: { sheet: "ow", x: 97, y: 293, w: 26, h: 42, scale: 2, foot: [4, 2] },
   well: { sheet: "ow", x: 101, y: 230, w: 22, h: 23, scale: 2, foot: [3, 2] },
-  // neighbor cottages: bumped from 2x to 4x (their native art is a tiny
-  // overworld-map icon, ~15px) so they read as real houses next to the
-  // player's much larger `bighouse`, without matching it exactly.
-  house_a: { sheet: "ow", x: 0, y: 288, w: 15, h: 15, scale: 4, foot: [4, 2] },
-  house_b: { sheet: "ow", x: 16, y: 288, w: 14, h: 16, scale: 4, foot: [4, 2] },
-  house_c: { sheet: "ow", x: 32, y: 288, w: 16, h: 16, scale: 4, foot: [4, 2] },
+  // neighbor cottages: three distinct standalone houses from the overworld
+  // sheet, drawn at a scale that reads as a real (if modest) home next to the
+  // player's much larger `bighouse` while staying small enough to sit between
+  // the streets without overrunning them. The old house_a rect [0,288] was a
+  // haystack blob, not a house; repointed to the blue cottage.
+  house_a: { sheet: "ow", x: 16, y: 288, w: 14, h: 16, scale: 3, foot: [3, 2] }, // blue roof
+  house_b: { sheet: "ow", x: 32, y: 288, w: 16, h: 16, scale: 3, foot: [3, 2] }, // red barn
+  house_c: { sheet: "ow", x: 115, y: 267, w: 25, h: 19, scale: 2, foot: [4, 2] }, // tan lodge
   // town-scale props (1x). bighouse/rock_s/rock_b corrected the same way.
   bighouse: { sheet: "tw", x: 192, y: 25, w: 80, h: 127, scale: 1, foot: [5, 3] },
   tree: { sheet: "tw", x: 118, y: 16, w: 54, h: 63, scale: 1, foot: [2, 1] },
@@ -541,12 +543,13 @@ export const TOWN: MapDef = {
     { sprite: "sign", tx: 24, ty: 14, dialog: "sign_welcome", label: "WELCOME" },
     { sprite: "sign", tx: 17, ty: 14, dialog: "sign_home", label: "STUDIO" },
     { sprite: "sign", tx: 12, ty: 22, dialog: "sign_flagship", label: "FLAGSHIP" },
-    // neighbor cottages: spaced out for their larger (4-tile) footprint,
-    // clear of the signs/temple/castle/arena rows they share
-    { sprite: "house_a", tx: 8, ty: 14, dialog: "neighbor" },
-    { sprite: "house_c", tx: 26, ty: 14, dialog: "neighbor" },
-    { sprite: "house_b", tx: 6, ty: 24, dialog: "neighbor" },
-    { sprite: "house_a", tx: 21, ty: 24, dialog: "neighbor" },
+    // neighbor cottages: placed one row above the streets (row 14 gap north,
+    // row 24 gap south) so their base clears the road, and horizontally clear
+    // of the buildings/signs/greenery on their rows (verified by layout math)
+    { sprite: "house_a", tx: 7, ty: 13, dialog: "neighbor" },
+    { sprite: "house_c", tx: 26, ty: 13, dialog: "neighbor" },
+    { sprite: "house_b", tx: 9, ty: 23, dialog: "neighbor" },
+    { sprite: "house_a", tx: 23, ty: 23, dialog: "neighbor" },
     // west-side greenery (where the old security quarter stood)
     { sprite: "tree", tx: 6, ty: 21 }, { sprite: "tree", tx: 11, ty: 13 },
     { sprite: "stump", tx: 7, ty: 27 }, { sprite: "bush1", tx: 10, ty: 19 },
