@@ -86,6 +86,40 @@ function Nav({ scrolled }: { scrolled: boolean }) {
               {item.label}
             </a>
           ))}
+          <span className="h-4 w-px bg-black/[0.1] dark:bg-white/[0.12]" />
+          <Link
+            href="/"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            Pixel World
+          </Link>
+          <Link
+            href="/about"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            About
+          </Link>
+          <Link
+            href="/n"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            Blog
+          </Link>
+          <Link
+            href="/learning"
+            className="text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            Learning
+          </Link>
+          <a
+            href={THREATSCAPER}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-[13px] text-black/55 dark:text-neutral-500 hover:text-black dark:hover:text-neutral-200 transition-colors duration-200"
+          >
+            ThreatScaper
+            <ExternalLink className="w-3 h-3" />
+          </a>
           <a
             href="#connect"
             className="apple-gloss-btn-secondary py-1.5 px-3.5 text-[13px]"
@@ -123,7 +157,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 function Hero({ scrollY }: { scrollY: number }) {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
-      {/* background glow — the only place cosmic color lives */}
+      {/* background glow: the only place cosmic color lives */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-full pointer-events-none"
         style={{
@@ -174,7 +208,7 @@ function Hero({ scrollY }: { scrollY: number }) {
         >
           RSOC analyst lead and CS graduate researcher. I run detection &amp;
           response across 20,000+ endpoints and build at the intersection of
-          cloud infrastructure, AI systems, and security architecture — including{" "}
+          cloud infrastructure, AI systems, and security architecture, including{" "}
           <span className="text-black/80 dark:text-neutral-300">ThreatScaper</span>, an AI-powered
           threat-intelligence enrichment tool.
         </motion.p>
@@ -233,7 +267,7 @@ function Expertise() {
       from: "#A9CBFF",
       to: "#6FA0F6",
       label: "Cloud Architecture",
-      desc: "Multi-cloud security and infrastructure-as-code across AWS, Azure, and GCP — Wazuh monitoring, zero-trust design, and secure connectivity at scale.",
+      desc: "Multi-cloud security and infrastructure-as-code across AWS, Azure, and GCP: Wazuh monitoring, zero-trust design, and secure connectivity at scale.",
       tags: ["AWS", "Azure", "GCP", "Terraform", "Zero Trust", "Wazuh"],
     },
     {
@@ -241,7 +275,7 @@ function Expertise() {
       from: "#DDBDF8",
       to: "#B383EC",
       label: "Applied AI",
-      desc: "Domain-adaptive LLM pre-training and agentic tooling for security operations — from NeMo pipelines to ML anomaly detection in production defenses.",
+      desc: "Domain-adaptive LLM pre-training and agentic tooling for security operations, from NeMo pipelines to ML anomaly detection in production defenses.",
       tags: ["LLMs", "DAPT / NeMo", "Agentic Tooling", "Anomaly Detection"],
     },
   ];
@@ -300,7 +334,7 @@ function Projects() {
       from: "#F2808A",
       to: "#E05263",
       status: "Flagship",
-      desc: "AI-powered threat-intelligence enrichment tool for security and business operations — automated IOC enrichment and machine-speed triage.",
+      desc: "AI-powered threat-intelligence enrichment tool for security and business operations: automated IOC enrichment and machine-speed triage.",
       tags: ["AI", "Threat Intel", "Security Ops"],
       year: "2026",
       href: THREATSCAPER,
@@ -333,7 +367,7 @@ function Projects() {
       from: "#DDBDF8",
       to: "#B383EC",
       status: "Research",
-      desc: "Reproduced NVIDIA's domain-adaptive pre-training pipeline for Llama 2 7B — data curation, custom tokenization, DAPT, and SFT with NeMo.",
+      desc: "Reproduced NVIDIA's domain-adaptive pre-training pipeline for Llama 2 7B: data curation, custom tokenization, DAPT, and SFT with NeMo.",
       tags: ["NeMo", "Llama 2", "DAPT", "Python"],
       year: "2026",
       href: "/n/4",
@@ -505,7 +539,7 @@ function Research() {
       area: "AI Security",
       status: "Active",
       summary:
-        "Training security-domain language models across multiple tenants without sharing raw data — combining federated learning with domain-adaptive pre-training to preserve privacy in multi-tenant SOC environments.",
+        "Training security-domain language models across multiple tenants without sharing raw data, combining federated learning with domain-adaptive pre-training to preserve privacy in multi-tenant SOC environments.",
     },
     {
       title:
@@ -691,7 +725,7 @@ function Connect() {
               Let&apos;s build something together
             </h2>
             <p className="text-[14px] text-black/55 dark:text-neutral-500 max-w-[420px] mx-auto leading-[1.75] mb-10">
-              Open to cloud, AI, and security-architecture roles. Reach out — or
+              Open to cloud, AI, and security-architecture roles. Reach out, or
               read the full story on my{" "}
               <Link href="/about" className="text-black/80 dark:text-neutral-300 hover:text-black dark:hover:text-white underline underline-offset-2 transition-colors">
                 résumé
@@ -765,7 +799,7 @@ export default function PortfolioLanding() {
           50% { transform: translateY(5px); }
         }
       `}</style>
-      {/* Big Sur wallpaper behind a frosted scrim — the landing reads like a
+      {/* Big Sur wallpaper behind a frosted scrim: the landing reads like a
           giant glass sheet over the desktop. */}
       <div className="fixed inset-0 z-0">
         <Wallpaper />
